@@ -1,0 +1,6 @@
+{
+  "name": "شغف | gwassim_097",
+  "description": "منصة اجتماعية وألعاب لتنظيم الكلانات، التواصل التنافسي، والبطولات في مكان واحد.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

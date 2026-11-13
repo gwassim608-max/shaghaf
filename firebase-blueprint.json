@@ -1,0 +1,464 @@
+{
+  "entities": {
+    "GamerName": {
+      "title": "GamerName",
+      "description": "Unique lowercase gamer tag reservation mapping to a user UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "createdAt"]
+    },
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "Public gamer profile without PII.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "gamerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "bio": { "type": "string", "maxLength": 160 },
+        "skills": { "type": "string", "maxLength": 120 },
+        "gameId": { "type": "string", "maxLength": 40 },
+        "rank": { "type": "string", "maxLength": 40 },
+        "favoriteGames": { "type": "string", "maxLength": 120 },
+        "playingGame": { "type": "string", "maxLength": 40 },
+        "isPrivate": { "type": "boolean" },
+        "isMinor": { "type": "boolean" },
+        "xp": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "gamerTag", "isPrivate", "isMinor", "xp", "createdAt", "updatedAt"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Private user settings and PII isolated from public reads.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "language": { "type": "string", "enum": ["ar", "en", "fr"] },
+        "liteMode": { "type": "boolean" },
+        "dndMode": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "language", "liteMode", "dndMode", "updatedAt"]
+    },
+    "UserFlag": {
+      "title": "UserFlag",
+      "description": "Admin-managed verification badge, featured boost, and ban state.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "gamerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "badge": { "type": "string", "enum": ["none", "gift", "sub", "own"] },
+        "boost": { "type": "boolean" },
+        "ban": { "type": "boolean" },
+        "banUntilMs": { "type": "number" },
+        "chatBanUntilMs": { "type": "number" },
+        "banReason": { "type": "string", "maxLength": 160 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "gamerTag", "badge", "boost", "ban", "updatedAt"]
+    },
+    "FriendLink": {
+      "title": "FriendLink",
+      "description": "Categorized friend relationship (normal, good, bro).",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "friendUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "friendTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "tier": { "type": "string", "enum": ["normal", "good", "bro"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "friendUid", "friendTag", "tier", "updatedAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Community feed post scoped to a game server or global hub.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "server": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "content": { "type": "string", "maxLength": 400 },
+        "imageUrl": { "type": "string", "minLength": 8, "maxLength": 500 },
+        "hashtags": { "type": "array" },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorTag", "server", "content", "visibility", "createdAt", "updatedAt"]
+    },
+    "PostLike": {
+      "title": "PostLike",
+      "description": "User like record on a post.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "PostComment": {
+      "title": "PostComment",
+      "description": "Comment on a community post.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorTag", "text", "createdAt"]
+    },
+    "Story": {
+      "title": "Story",
+      "description": "24-hour ephemeral gamer story.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "themeIndex": { "type": "number" },
+        "expiresAtMs": { "type": "number" },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorTag", "text", "themeIndex", "expiresAtMs", "visibility", "createdAt"]
+    },
+    "Clan": {
+      "title": "Clan",
+      "description": "Gaming clan or public game chat room for squad coordination.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "tag": { "type": "string", "minLength": 2, "maxLength": 6 },
+        "game": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "region": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "minRank": { "type": "string", "maxLength": 30 },
+        "description": { "type": "string", "maxLength": 240 },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "tag", "game", "region", "ownerUid", "ownerTag", "isPublic", "createdAt", "updatedAt"]
+    },
+    "ClanMember": {
+      "title": "ClanMember",
+      "description": "Membership and role inside a clan or room.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "gamerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "role": { "type": "string", "enum": ["owner", "mod", "member"] },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "gamerTag", "role", "joinedAt"]
+    },
+    "ClanMessage": {
+      "title": "ClanMessage",
+      "description": "Real-time message in a clan or game room.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "text": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "mediaUrl": { "type": "string", "minLength": 8, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorTag", "text", "createdAt"]
+    },
+    "DmThread": {
+      "title": "DmThread",
+      "description": "Direct message or group chat thread.",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array" },
+        "participantTags": { "type": "object" },
+        "lastMessage": { "type": "string", "maxLength": 300 },
+        "isGroup": { "type": "boolean" },
+        "groupName": { "type": "string", "minLength": 2, "maxLength": 50 },
+        "creatorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "participantTags", "updatedAt"]
+    },
+    "DmMessage": {
+      "title": "DmMessage",
+      "description": "Direct message item inside a thread.",
+      "type": "object",
+      "properties": {
+        "senderUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "senderTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "text": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "mediaUrl": { "type": "string", "minLength": 8, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderUid", "senderTag", "text", "createdAt"]
+    },
+    "ServiceListing": {
+      "title": "ServiceListing",
+      "description": "Creator skill or coaching listing in the marketplace.",
+      "type": "object",
+      "properties": {
+        "sellerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sellerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 240 },
+        "price": { "type": "number" },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sellerUid", "sellerTag", "title", "price", "visibility", "createdAt"]
+    },
+    "MarketOrder": {
+      "title": "MarketOrder",
+      "description": "Escrow order for a marketplace service.",
+      "type": "object",
+      "properties": {
+        "buyerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "buyerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "sellerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sellerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "serviceId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "serviceTitle": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "price": { "type": "number" },
+        "paymentMethod": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "status": { "type": "string", "enum": ["escrow", "delivered", "completed"] },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["buyerUid", "buyerTag", "sellerUid", "sellerTag", "serviceId", "serviceTitle", "price", "paymentMethod", "status", "createdAt", "updatedAt"]
+    },
+    "LfgPost": {
+      "title": "LfgPost",
+      "description": "Looking-for-group squad recruitment request.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "game": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "rank": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "schedule": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorTag", "game", "rank", "schedule", "visibility", "createdAt"]
+    },
+    "Tournament": {
+      "title": "Tournament",
+      "description": "Competitive esports or Battle Royale tournament.",
+      "type": "object",
+      "properties": {
+        "creatorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "creatorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "title": { "type": "string", "minLength": 3, "maxLength": 80 },
+        "game": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "dateLabel": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "prize": { "type": "string", "maxLength": 40 },
+        "mode": { "type": "string", "enum": ["solo", "squad"] },
+        "category": { "type": "string", "enum": ["friendly", "official", "qualifiers"] },
+        "isBot": { "type": "boolean" },
+        "officialSource": { "type": "string", "maxLength": 60 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "sourceUrl": { "type": "string", "maxLength": 500 },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["creatorUid", "creatorTag", "title", "game", "dateLabel", "visibility", "createdAt"]
+    },
+    "TournamentParticipant": {
+      "title": "TournamentParticipant",
+      "description": "Registered player or clan for a tournament.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "gamerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "gamerTag", "joinedAt"]
+    },
+    "AdminWarning": {
+      "title": "AdminWarning",
+      "description": "Moderation warning issued by the owner/admin.",
+      "type": "object",
+      "properties": {
+        "targetUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["targetUid", "message", "createdAt"]
+    },
+    "UserReport": {
+      "title": "UserReport",
+      "description": "Abuse report submitted against a user.",
+      "type": "object",
+      "properties": {
+        "reporterUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reporterTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "targetUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "targetTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterUid", "reporterTag", "targetUid", "targetTag", "reason", "createdAt"]
+    },
+    "BadgeRequest": {
+      "title": "BadgeRequest",
+      "description": "User request for a paid verification badge subscription.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "gamerTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "paymentMethod": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "referenceNote": { "type": "string", "maxLength": 160 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "gamerTag", "paymentMethod", "status", "createdAt", "updatedAt"]
+    },
+    "BotMessage": {
+      "title": "BotMessage",
+      "description": "Automated welcome or moderation message from the Shaghaf Bot.",
+      "type": "object",
+      "properties": {
+        "targetUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "body": { "type": "string", "minLength": 1, "maxLength": 900 },
+        "kind": { "type": "string", "enum": ["welcome", "warning", "ban", "tournament"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["targetUid", "title", "body", "kind", "read", "createdAt"]
+    },
+    "VideoPost": {
+      "title": "VideoPost",
+      "description": "Community gaming video or highlight clip scoped to a server.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "server": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "videoUrl": { "type": "string", "minLength": 10, "maxLength": 500 },
+        "hashtags": { "type": "array" },
+        "repostFromTag": { "type": "string", "minLength": 3, "maxLength": 16 },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorTag", "server", "title", "videoUrl", "visibility", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/names/{nameKey}": {
+      "schema": { "$ref": "#/entities/GamerName" },
+      "description": "Unique gamer tag index."
+    },
+    "/users_public/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublic" },
+      "description": "Public gamer profile."
+    },
+    "/users_private/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Private user settings and PII."
+    },
+    "/users_public/{userId}/friends/{friendUid}": {
+      "schema": { "$ref": "#/entities/FriendLink" },
+      "description": "User's categorized friends list."
+    },
+    "/flags/{userId}": {
+      "schema": { "$ref": "#/entities/UserFlag" },
+      "description": "Admin-only badges, boosts, and bans."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "Community posts."
+    },
+    "/posts/{postId}/likes/{likerUid}": {
+      "schema": { "$ref": "#/entities/PostLike" },
+      "description": "Likes on a post."
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/PostComment" },
+      "description": "Comments on a post."
+    },
+    "/stories/{storyId}": {
+      "schema": { "$ref": "#/entities/Story" },
+      "description": "24-hour gamer stories."
+    },
+    "/clans/{clanId}": {
+      "schema": { "$ref": "#/entities/Clan" },
+      "description": "Clans and game chat rooms."
+    },
+    "/clans/{clanId}/members/{memberUid}": {
+      "schema": { "$ref": "#/entities/ClanMember" },
+      "description": "Clan members and room moderators."
+    },
+    "/clans/{clanId}/messages/{msgId}": {
+      "schema": { "$ref": "#/entities/ClanMessage" },
+      "description": "Clan and room chat messages."
+    },
+    "/dms/{threadId}": {
+      "schema": { "$ref": "#/entities/DmThread" },
+      "description": "1-on-1 DM threads."
+    },
+    "/dms/{threadId}/messages/{msgId}": {
+      "schema": { "$ref": "#/entities/DmMessage" },
+      "description": "Messages inside a DM thread."
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/ServiceListing" },
+      "description": "Marketplace skill and coaching listings."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/MarketOrder" },
+      "description": "Escrow marketplace orders."
+    },
+    "/lfg/{lfgId}": {
+      "schema": { "$ref": "#/entities/LfgPost" },
+      "description": "Squad/LFG recruitment posts."
+    },
+    "/tournaments/{tournamentId}": {
+      "schema": { "$ref": "#/entities/Tournament" },
+      "description": "Competitive tournaments."
+    },
+    "/tournaments/{tournamentId}/participants/{participantUid}": {
+      "schema": { "$ref": "#/entities/TournamentParticipant" },
+      "description": "Tournament registrations."
+    },
+    "/warns/{targetUid}/items/{warnId}": {
+      "schema": { "$ref": "#/entities/AdminWarning" },
+      "description": "Admin warnings delivered to a user."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/UserReport" },
+      "description": "Moderation reports submitted by users."
+    },
+    "/badge_requests/{userId}": {
+      "schema": { "$ref": "#/entities/BadgeRequest" },
+      "description": "Badge subscription payment requests."
+    },
+    "/bot_messages/{targetUid}/items/{msgId}": {
+      "schema": { "$ref": "#/entities/BotMessage" },
+      "description": "Shaghaf Bot onboarding and moderation messages."
+    },
+    "/videos/{videoId}": {
+      "schema": { "$ref": "#/entities/VideoPost" },
+      "description": "Community gaming video posts and highlights."
+    },
+    "/videos/{videoId}/likes/{likerUid}": {
+      "schema": { "$ref": "#/entities/PostLike" },
+      "description": "Likes on a video post."
+    }
+  }
+}

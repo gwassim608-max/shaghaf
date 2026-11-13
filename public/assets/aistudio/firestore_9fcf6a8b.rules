@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signed() { return request.auth != null; }
+    function owner() {
+      return signed()
+        && request.auth.token.email == 'OWNER_EMAIL'
+        && request.auth.token.email_verified == true;
+    }
+    function mine(name) {
+      return signed()
+        && get(/databases/$(db)/documents/names/$(name.lower())).data.uid == request.auth.uid;
+    }
+    function notBanned(name) {
+      return !(exists(/databases/$(db)/documents/flags/$(name.lower()))
+        && get(/databases/$(db)/documents/flags/$(name.lower())).data.get('ban', false) == true);
+    }
+
+    match /names/{n} {
+      allow read: if signed();
+      allow create: if signed() && request.resource.data.uid == request.auth.uid && n != 'مؤسس شغف';
+      allow delete: if signed() && resource.data.uid == request.auth.uid;
+    }
+    match /users/{uid} {
+      allow read: if signed();
+      allow write: if signed() && request.auth.uid == uid;
+    }
+    match /flags/{n} {
+      allow read: if signed();
+      allow write: if owner();
+    }
+    match /warns/{n} {
+      allow read: if mine(n) || owner();
+      allow create, update: if owner();
+      allow delete: if mine(n) || owner();
+    }
+    match /reports/{id} {
+      allow create: if signed();
+      allow read: if owner();
+    }
+    match /posts/{id} {
+      allow read: if signed();
+      allow create: if signed()
+        && mine(request.resource.data.u) && notBanned(request.resource.data.u)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.t.size() <= 400
+        && request.resource.data.keys().hasOnly(['u','s','t','c','lk','uid','ts']);
+      allow update: if signed()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lk','c']);
+      allow delete: if owner() || resource.data.uid == request.auth.uid;
+    }
+    match /msgs/{id} {
+      allow read: if signed();
+      allow create: if signed()
+        && mine(request.resource.data.u) && notBanned(request.resource.data.u)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.t.size() <= 300
+        && request.resource.data.keys().hasOnly(['room','u','t','uid','ts']);
+      allow delete: if owner() || resource.data.uid == request.auth.uid;
+    }
+  }
+}

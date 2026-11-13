@@ -1,0 +1,810 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Hardened Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email in ['gwassim608@gmail.com', 'wassimzouaui604@gmail.com'] ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function notBanned() {
+      return !exists(/databases/$(database)/documents/flags/$(request.auth.uid))
+        || get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.ban != true
+        || (
+          ('banUntilMs' in get(/databases/$(database)/documents/flags/$(request.auth.uid)).data)
+          && get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.banUntilMs is number
+          && get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.banUntilMs > 0
+          && request.time.toMillis() >= get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.banUntilMs
+        );
+    }
+    function notChatMuted() {
+      return notBanned() && (
+        !exists(/databases/$(database)/documents/flags/$(request.auth.uid))
+        || !('chatBanUntilMs' in get(/databases/$(database)/documents/flags/$(request.auth.uid)).data)
+        || (
+          get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.chatBanUntilMs is number
+          && (
+            get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.chatBanUntilMs <= 0
+            || request.time.toMillis() >= get(/databases/$(database)/documents/flags/$(request.auth.uid)).data.chatBanUntilMs
+          )
+        )
+      );
+    }
+    function isSafeMediaUrl(url) {
+      return url is string && url.size() >= 8 && url.size() <= 500 && (
+        url.matches('^https://.*')
+        || url.matches('^/uploads/[a-zA-Z0-9._\\-]+$')
+        || url.matches('^/api/meme/[a-zA-Z0-9._\\-]+\\.svg$')
+        || url.matches('^/api/server-bg/[a-zA-Z0-9._\\-]+\\.svg$')
+        || url.matches('^/api/news-art/[a-zA-Z0-9._\\-]+\\.svg$')
+        || url.matches('^/backgrounds/[a-zA-Z0-9._\\-]+\\.(jpg|png|svg)$')
+      );
+    }
+
+    // --- Entity Validation Helpers ---
+    function isValidGamerName(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'createdAt'])
+        && data.uid == request.auth.uid
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.displayName is string && data.displayName.size() >= 3 && data.displayName.size() <= 16
+        && data.displayName != 'مؤسس شغف'
+        && data.createdAt == request.time;
+    }
+
+    function isValidUserPublic(data) {
+      return data.keys().hasAll(['uid', 'gamerTag', 'isPrivate', 'isMinor', 'xp', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'gamerTag', 'bio', 'skills', 'gameId', 'rank', 'favoriteGames', 'playingGame', 'isPrivate', 'isMinor', 'xp', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.gamerTag is string && data.gamerTag.size() >= 3 && data.gamerTag.size() <= 16
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 160))
+        && (!('skills' in data) || (data.skills is string && data.skills.size() <= 120))
+        && (!('gameId' in data) || (data.gameId is string && data.gameId.size() <= 40))
+        && (!('rank' in data) || (data.rank is string && data.rank.size() <= 40))
+        && (!('favoriteGames' in data) || (data.favoriteGames is string && data.favoriteGames.size() <= 120))
+        && (!('playingGame' in data) || (data.playingGame is string && data.playingGame.size() <= 40))
+        && data.isPrivate is bool
+        && data.isMinor is bool
+        && data.xp is number && data.xp >= 0 && data.xp <= 99999999
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.keys().hasAll(['uid', 'language', 'liteMode', 'dndMode', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'language', 'liteMode', 'dndMode', 'updatedAt'])
+        && data.uid == request.auth.uid
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && (!('email' in data) || (data.email is string && data.email.size() <= 160))
+        && data.language in ['ar', 'en', 'fr']
+        && data.liteMode is bool
+        && data.dndMode is bool
+        && data.updatedAt == request.time;
+    }
+
+    function isValidUserFlag(data) {
+      return data.keys().hasAll(['uid', 'gamerTag', 'badge', 'boost', 'ban', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'gamerTag', 'badge', 'boost', 'ban', 'banUntilMs', 'chatBanUntilMs', 'banReason', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.gamerTag is string && data.gamerTag.size() >= 3 && data.gamerTag.size() <= 16
+        && data.badge in ['none', 'gift', 'sub', 'own']
+        && data.boost is bool
+        && data.ban is bool
+        && (!('banUntilMs' in data) || (data.banUntilMs is number && data.banUntilMs >= 0))
+        && (!('chatBanUntilMs' in data) || (data.chatBanUntilMs is number && data.chatBanUntilMs >= 0))
+        && (!('banReason' in data) || (data.banReason is string && data.banReason.size() <= 160))
+        && data.updatedAt == request.time;
+    }
+
+    function isValidFriendLink(data) {
+      return data.keys().hasAll(['ownerUid', 'friendUid', 'friendTag', 'tier', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'friendUid', 'friendTag', 'tier', 'updatedAt'])
+        && data.ownerUid == request.auth.uid
+        && data.friendUid is string && data.friendUid.size() >= 1 && data.friendUid.size() <= 128
+        && data.friendTag is string && data.friendTag.size() >= 3 && data.friendTag.size() <= 16
+        && data.tier in ['normal', 'good', 'bro']
+        && data.updatedAt == request.time;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['authorUid', 'authorTag', 'server', 'content', 'visibility', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['authorUid', 'authorTag', 'server', 'content', 'imageUrl', 'hashtags', 'visibility', 'createdAt', 'updatedAt'])
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
+        && data.server is string && data.server.size() >= 1 && data.server.size() <= 40
+        && data.content is string && data.content.size() <= 400
+        && (!('imageUrl' in data) || isSafeMediaUrl(data.imageUrl))
+        && (!('hashtags' in data) || (
+          data.hashtags is list
+          && data.hashtags.size() >= 1
+          && data.hashtags.size() <= 10
+          && data.hashtags[0] is string
+          && data.hashtags[0].size() >= 1
+          && data.hashtags[0].size() <= 32
+        ))
+        && (data.content.size() >= 1 || 'imageUrl' in data)
+        && data.visibility == 'public'
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidPostLike(data) {
+      return data.keys().hasAll(['uid', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'createdAt'])
+        && data.uid == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidPostComment(data) {
+      return data.keys().hasAll(['authorUid', 'authorTag', 'text', 'createdAt'])
+        && data.keys().hasOnly(['authorUid', 'authorTag', 'text', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 300
+        && data.createdAt == request.time;
+    }
+
+    function isValidStory(data) {
+      return data.keys().hasAll(['authorUid', 'authorTag', 'text', 'themeIndex', 'expiresAtMs', 'visibility', 'createdAt'])
+        && data.keys().hasOnly(['authorUid', 'authorTag', 'text', 'themeIndex', 'expiresAtMs', 'visibility', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 180
+        && data.themeIndex is number && data.themeIndex >= 0 && data.themeIndex <= 10
+        && data.expiresAtMs is number && data.expiresAtMs > 0
+        && data.visibility == 'public'
+        && data.createdAt == request.time;
+    }
+
+    function isValidClan(data) {
+      return data.keys().hasAll(['name', 'tag', 'game', 'region', 'ownerUid', 'ownerTag', 'isPublic', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'tag', 'game', 'region', 'minRank', 'description', 'ownerUid', 'ownerTag', 'isPublic', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 32
+        && data.tag is string && data.tag.size() >= 2 && data.tag.size() <= 6
+        && data.game is string && data.game.size() >= 2 && data.game.size() <= 40
+        && data.region is string && data.region.size() >= 2 && data.region.size() <= 30
+        && (!('minRank' in data) || (data.minRank is string && data.minRank.size() <= 30))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 240))
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.ownerTag is string && data.ownerTag.size() >= 3 && data.ownerTag.size() <= 16
+        && data.isPublic is bool
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidClanMember(data) {
+      return data.keys().hasAll(['uid', 'gamerTag', 'role', 'joinedAt'])
+        && data.keys().hasOnly(['uid', 'gamerTag', 'role', 'joinedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.gamerTag is string && data.gamerTag.size() >= 3 && data.gamerTag.size() <= 16
+        && data.role in ['owner', 'mod', 'member']
+        && data.joinedAt is timestamp;
+    }
+
+    function isValidClanMessage(data) {
+      return data.keys().hasAll(['authorUid', 'authorTag', 'text', 'createdAt'])
+        && data.keys().hasOnly(['authorUid', 'authorTag', 'text', 'mediaUrl', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
+        && data.text is string && data.text.size() <= 300
+        && (!('mediaUrl' in data) || isSafeMediaUrl(data.mediaUrl))
+        && (data.text.size() >= 1 || 'mediaUrl' in data)
+        && data.createdAt == request.time;
+    }
+
+    function isValidDmThread(data) {
+      return data.keys().hasAll(['participants', 'participantTags', 'updatedAt'])
+        && data.keys().hasOnly(['participants', 'participantTags', 'lastMessage', 'isGroup', 'groupName', 'creatorUid', 'updatedAt'])
+        && data.participants is list && data.participants.size() >= 2 && data.participants.size() <= 30
+        && data.participants[0] is string && data.participants[0].size() >= 1 && data.participants[0].size() <= 128
+        && data.participants[1] is string && data.participants[1].size() >= 1 && data.participants[1].size() <= 128
+        && data.participants[0] != data.participants[1]
+        && data.participantTags is map
+        && data.participantTags.size() >= 2 && data.participantTags.size() <= 30
+        && data.participantTags.keys().hasAll(data.participants)
+        && data.participantTags.keys().hasOnly(data.participants)
+        && (!('isGroup' in data) || data.isGroup is bool)
+        && (!('groupName' in data) || (data.groupName is string && data.groupName.size() >= 2 && data.groupName.size() <= 50))
+        && (!('creatorUid' in data) || (data.creatorUid is string && data.creatorUid.size() >= 1 && data.creatorUid.size() <= 128))
+        && (
+          (!('isGroup' in data) || data.isGroup == false)
+            ? data.participants.size() == 2
+            : ('groupName' in data && 'creatorUid' in data)
+        )
+        && (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 300))
+        && data.updatedAt == request.time;
+    }
+
+    function isValidDmMessage(data) {
+      return data.keys().hasAll(['senderUid', 'senderTag', 'text', 'createdAt'])
+        && data.keys().hasOnly(['senderUid', 'senderTag', 'text', 'mediaUrl', 'createdAt'])
+        && data.senderUid == request.auth.uid
+        && data.senderTag is string && data.senderTag.size() >= 3 && data.senderTag.size() <= 16
+        && data.text is string && data.text.size() <= 300
+        && (!('mediaUrl' in data) || isSafeMediaUrl(data.mediaUrl))
+        && (data.text.size() >= 1 || 'mediaUrl' in data)
+        && data.createdAt == request.time;
+    }
+
+    function isValidService(data) {
+      return data.keys().hasAll(['sellerUid', 'sellerTag', 'title', 'price', 'visibility', 'createdAt'])
+        && data.keys().hasOnly(['sellerUid', 'sellerTag', 'title', 'description', 'price', 'visibility', 'createdAt'])
+        && data.sellerUid == request.auth.uid
+        && data.sellerTag is string && data.sellerTag.size() >= 3 && data.sellerTag.size() <= 16
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 80
+        && (!('description' in data) || (data.description is string && data.description.size() <= 240))
+        && data.price is number && data.price >= 1 && data.price <= 10000
+        && data.visibility == 'public'
+        && data.createdAt == request.time;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['buyerUid', 'buyerTag', 'sellerUid', 'sellerTag', 'serviceId', 'serviceTitle', 'price', 'paymentMethod', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['buyerUid', 'buyerTag', 'sellerUid', 'sellerTag', 'serviceId', 'serviceTitle', 'price', 'paymentMethod', 'status', 'rating', 'createdAt', 'updatedAt'])
+        && data.buyerUid is string && data.buyerUid.size() >= 1 && data.buyerUid.size() <= 128
+        && data.buyerTag is string && data.buyerTag.size() >= 3 && data.buyerTag.size() <= 16
+        && data.sellerUid is string && data.sellerUid.size() >= 1 && data.sellerUid.size() <= 128
+        && data.sellerTag is string && data.sellerTag.size() >= 3 && data.sellerTag.size() <= 16
+        && data.serviceId is string && data.serviceId.size() >= 1 && data.serviceId.size() <= 128
+        && data.serviceTitle is string && data.serviceTitle.size() >= 2 && data.serviceTitle.size() <= 80
+        && data.price is number && data.price >= 1 && data.price <= 10000
+        && data.paymentMethod is string && data.paymentMethod.size() >= 2 && data.paymentMethod.size() <= 30
+        && data.status in ['escrow', 'delivered', 'completed']
+        && (!('rating' in data) || (data.rating is number && data.rating >= 1 && data.rating <= 5))
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidLfg(data) {
+      return data.keys().hasAll(['authorUid', 'authorTag', 'game', 'rank', 'schedule', 'visibility', 'createdAt'])
+        && data.keys().hasOnly(['authorUid', 'authorTag', 'game', 'rank', 'schedule', 'visibility', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
+        && data.game is string && data.game.size() >= 2 && data.game.size() <= 40
+        && data.rank is string && data.rank.size() >= 1 && data.rank.size() <= 40
+        && data.schedule is string && data.schedule.size() >= 1 && data.schedule.size() <= 60
+        && data.visibility == 'public'
+        && data.createdAt == request.time;
+    }
+
+    function isValidTournament(data) {
+      return data.keys().hasAll(['creatorUid', 'creatorTag', 'title', 'game', 'dateLabel', 'visibility', 'createdAt'])
+        && data.keys().hasOnly(['creatorUid', 'creatorTag', 'title', 'game', 'dateLabel', 'prize', 'mode', 'category', 'isBot', 'officialSource', 'imageUrl', 'videoUrl', 'sourceUrl', 'visibility', 'createdAt'])
+        && data.creatorUid == request.auth.uid
+        && data.creatorTag is string && data.creatorTag.size() >= 3 && data.creatorTag.size() <= 16
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 80
+        && data.game is string && data.game.size() >= 2 && data.game.size() <= 40
+        && data.dateLabel is string && data.dateLabel.size() >= 1 && data.dateLabel.size() <= 40
+        && (!('prize' in data) || (data.prize is string && data.prize.size() <= 40))
+        && (!('mode' in data) || data.mode in ['solo', 'squad'])
+        && (!('category' in data) || data.category in ['friendly', 'official', 'qualifiers'])
+        && (!('isBot' in data) || data.isBot is bool)
+        && (!('officialSource' in data) || (data.officialSource is string && data.officialSource.size() <= 60))
+        && (!('imageUrl' in data) || isSafeMediaUrl(data.imageUrl))
+        && (!('videoUrl' in data) || isSafeMediaUrl(data.videoUrl))
+        && (!('sourceUrl' in data) || (data.sourceUrl is string && data.sourceUrl.size() <= 500 && data.sourceUrl.matches('^https://.*')))
+        && data.visibility == 'public'
+        && data.createdAt == request.time;
+    }
+
+    function isValidTournamentParticipant(data) {
+      return data.keys().hasAll(['uid', 'gamerTag', 'joinedAt'])
+        && data.keys().hasOnly(['uid', 'gamerTag', 'joinedAt'])
+        && data.uid == request.auth.uid
+        && data.gamerTag is string && data.gamerTag.size() >= 3 && data.gamerTag.size() <= 16
+        && data.joinedAt == request.time;
+    }
+
+    function isValidWarning(data) {
+      return data.keys().hasAll(['targetUid', 'message', 'createdAt'])
+        && data.keys().hasOnly(['targetUid', 'message', 'createdAt'])
+        && data.targetUid is string && data.targetUid.size() >= 1 && data.targetUid.size() <= 128
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 240
+        && data.createdAt == request.time;
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['reporterUid', 'reporterTag', 'targetUid', 'targetTag', 'reason', 'createdAt'])
+        && data.keys().hasOnly(['reporterUid', 'reporterTag', 'targetUid', 'targetTag', 'reason', 'createdAt'])
+        && data.reporterUid == request.auth.uid
+        && data.reporterTag is string && data.reporterTag.size() >= 3 && data.reporterTag.size() <= 16
+        && data.targetUid is string && data.targetUid.size() >= 1 && data.targetUid.size() <= 128
+        && data.targetTag is string && data.targetTag.size() >= 3 && data.targetTag.size() <= 16
+        && data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 240
+        && data.createdAt == request.time;
+    }
+
+    function isValidBadgeRequest(data) {
+      return data.keys().hasAll(['uid', 'gamerTag', 'paymentMethod', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'gamerTag', 'paymentMethod', 'referenceNote', 'status', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.gamerTag is string && data.gamerTag.size() >= 3 && data.gamerTag.size() <= 16
+        && data.paymentMethod is string && data.paymentMethod.size() >= 2 && data.paymentMethod.size() <= 30
+        && (!('referenceNote' in data) || (data.referenceNote is string && data.referenceNote.size() <= 160))
+        && data.status in ['pending', 'approved', 'rejected']
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidBotMessage(data) {
+      return data.keys().hasAll(['targetUid', 'title', 'body', 'kind', 'read', 'createdAt'])
+        && data.keys().hasOnly(['targetUid', 'title', 'body', 'kind', 'read', 'createdAt'])
+        && data.targetUid is string && data.targetUid.size() >= 1 && data.targetUid.size() <= 128
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 80
+        && data.body is string && data.body.size() >= 1 && data.body.size() <= 900
+        && data.kind in ['welcome', 'warning', 'ban', 'tournament']
+        && data.read is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidVideo(data) {
+      return data.keys().hasAll(['authorUid', 'authorTag', 'server', 'title', 'videoUrl', 'visibility', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['authorUid', 'authorTag', 'server', 'title', 'videoUrl', 'hashtags', 'repostFromTag', 'visibility', 'createdAt', 'updatedAt'])
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
+        && data.server is string && data.server.size() >= 1 && data.server.size() <= 40
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && data.videoUrl is string && data.videoUrl.size() >= 10 && data.videoUrl.size() <= 500
+        && (data.videoUrl.matches('^https://.*') || data.videoUrl.matches('^/uploads/[a-zA-Z0-9._\\-]+$'))
+        && (!('hashtags' in data) || (
+          data.hashtags is list
+          && data.hashtags.size() >= 1
+          && data.hashtags.size() <= 10
+          && data.hashtags[0] is string
+          && data.hashtags[0].size() >= 1
+          && data.hashtags[0].size() <= 32
+        ))
+        && (!('repostFromTag' in data) || (data.repostFromTag is string && data.repostFromTag.size() >= 3 && data.repostFromTag.size() <= 16))
+        && data.visibility == 'public'
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    // --- Collection Rules ---
+    match /admins/{adminId} {
+      allow get: if isVerified() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list, write: if false;
+    }
+
+    match /names/{nameKey} {
+      allow get: if isSignedIn() && isValidId(nameKey) && (resource == null || resource.data.uid is string);
+      allow list: if isSignedIn() && resource.data.uid is string;
+      allow create: if isVerified() && isValidId(nameKey) && isValidGamerName(incoming());
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(nameKey) && (existing().uid == request.auth.uid || isAdmin());
+    }
+
+    match /users_public/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (
+        request.auth.uid == userId || isAdmin() || (resource != null && resource.data.isPrivate == false)
+      );
+      allow list: if isSignedIn() && (
+        resource.data.isPrivate == false || resource.data.uid == request.auth.uid || isAdmin()
+      );
+      allow create: if isVerified() && isValidId(userId) && userId == request.auth.uid
+        && isValidUserPublic(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().xp == 0
+        && incoming().createdAt == request.time;
+      allow update: if isVerified() && isValidId(userId)
+        && isValidUserPublic(incoming())
+        && incoming().uid == existing().uid
+        && incoming().gamerTag == existing().gamerTag
+        && incoming().createdAt == existing().createdAt
+        && (
+          (request.auth.uid == userId
+            && incoming().xp <= 10000000
+            && incoming().xp >= existing().xp - 25
+            && incoming().xp <= existing().xp + 60
+            && incoming().diff(existing()).affectedKeys().hasOnly(['bio', 'skills', 'gameId', 'rank', 'favoriteGames', 'playingGame', 'isPrivate', 'isMinor', 'xp', 'updatedAt']))
+          || isAdmin()
+        );
+      allow delete: if isVerified() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+
+      match /friends/{friendUid} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(friendUid) && request.auth.uid == userId;
+        allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+        allow create: if isVerified() && isValidId(userId) && isValidId(friendUid) && request.auth.uid == userId && isValidFriendLink(incoming());
+        allow update: if isVerified() && isValidId(userId) && isValidId(friendUid) && request.auth.uid == userId
+          && isValidFriendLink(incoming())
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().friendUid == existing().friendUid
+          && incoming().diff(existing()).affectedKeys().hasOnly(['tier', 'friendTag', 'updatedAt']);
+        allow delete: if isVerified() && isValidId(userId) && isValidId(friendUid) && request.auth.uid == userId;
+      }
+    }
+
+    match /users_private/{userId} {
+      allow get: if isVerified() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isVerified() && resource.data.uid == request.auth.uid;
+      allow create: if isVerified() && isValidId(userId) && request.auth.uid == userId && isValidUserPrivate(incoming());
+      allow update: if isVerified() && isValidId(userId) && request.auth.uid == userId
+        && isValidUserPrivate(incoming())
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'language', 'liteMode', 'dndMode', 'updatedAt']);
+      allow delete: if isVerified() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /flags/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (resource == null || resource.data.uid is string);
+      allow list: if isSignedIn() && resource.data.uid is string;
+      allow create, update: if isAdmin() && isValidId(userId) && isValidUserFlag(incoming()) && (incoming().badge != 'own' || userId == request.auth.uid);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId) && (resource == null || resource.data.visibility == 'public');
+      allow list: if isSignedIn() && resource.data.visibility == 'public';
+      allow create: if isVerified() && isValidId(postId)
+        && isValidPost(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && (notBanned() || isAdmin());
+      allow update: if isVerified() && isValidId(postId)
+        && isValidPost(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && (
+          (existing().authorUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'imageUrl', 'hashtags', 'server', 'updatedAt']))
+          || isAdmin()
+        );
+      allow delete: if isVerified() && isValidId(postId) && (existing().authorUid == request.auth.uid || isAdmin());
+
+      match /likes/{likerUid} {
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(likerUid) && existing().uid is string;
+        allow list: if isSignedIn() && resource.data.uid is string;
+        allow create: if isVerified() && isValidId(postId) && isValidId(likerUid)
+          && likerUid == request.auth.uid
+          && isValidPostLike(incoming())
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && notBanned();
+        allow update: if false;
+        allow delete: if isVerified() && isValidId(postId) && isValidId(likerUid) && likerUid == request.auth.uid;
+      }
+
+      match /comments/{commentId} {
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(commentId) && existing().authorUid is string;
+        allow list: if isSignedIn() && resource.data.authorUid is string;
+        allow create: if isVerified() && isValidId(postId) && isValidId(commentId)
+          && isValidPostComment(incoming())
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && (notChatMuted() || isAdmin());
+        allow update: if false;
+        allow delete: if isVerified() && isValidId(postId) && isValidId(commentId) && (existing().authorUid == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /stories/{storyId} {
+      allow get: if isSignedIn() && isValidId(storyId) && existing().visibility == 'public';
+      allow list: if isSignedIn() && resource.data.visibility == 'public';
+      allow create: if isVerified() && isValidId(storyId) && isValidStory(incoming()) && (notBanned() || isAdmin());
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(storyId) && (existing().authorUid == request.auth.uid || isAdmin());
+    }
+
+    match /clans/{clanId} {
+      allow get: if isSignedIn() && isValidId(clanId) && (resource == null || resource.data.isPublic == true || resource.data.ownerUid == request.auth.uid || isAdmin() || exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)));
+      allow list: if isSignedIn() && (resource.data.isPublic == true || resource.data.ownerUid == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(clanId)
+        && isValidClan(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && notBanned();
+      allow update: if isVerified() && isValidId(clanId)
+        && isValidClan(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && (
+          (existing().ownerUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'tag', 'game', 'region', 'minRank', 'description', 'isPublic', 'updatedAt']))
+          || isAdmin()
+        );
+      allow delete: if isVerified() && isValidId(clanId) && (existing().ownerUid == request.auth.uid || isAdmin());
+
+      match /members/{memberUid} {
+        allow get: if isSignedIn() && isValidId(clanId) && isValidId(memberUid) && existing().uid is string;
+        allow list: if isSignedIn() && resource.data.uid is string;
+        allow create: if isVerified() && isValidId(clanId) && isValidId(memberUid)
+          && isValidClanMember(incoming())
+          && incoming().joinedAt == request.time
+          && exists(/databases/$(database)/documents/clans/$(clanId))
+          && (
+            (memberUid == request.auth.uid && incoming().uid == request.auth.uid && incoming().role == 'member'
+                && (notBanned() || isAdmin())
+                && get(/databases/$(database)/documents/clans/$(clanId)).data.isPublic == true)
+            || (memberUid == request.auth.uid && incoming().uid == request.auth.uid && incoming().role == 'owner'
+                && get(/databases/$(database)/documents/clans/$(clanId)).data.ownerUid == request.auth.uid)
+          );
+        allow update: if isVerified() && isValidId(clanId) && isValidId(memberUid)
+          && isValidClanMember(incoming())
+          && incoming().uid == existing().uid
+          && incoming().joinedAt == existing().joinedAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['role'])
+          && (
+            get(/databases/$(database)/documents/clans/$(clanId)).data.ownerUid == request.auth.uid
+            || isAdmin()
+          );
+        allow delete: if isVerified() && isValidId(clanId) && isValidId(memberUid) && (
+          memberUid == request.auth.uid
+          || get(/databases/$(database)/documents/clans/$(clanId)).data.ownerUid == request.auth.uid
+          || isAdmin()
+        );
+      }
+
+      match /messages/{msgId} {
+        allow get: if isSignedIn() && isValidId(clanId) && isValidId(msgId) && (
+          get(/databases/$(database)/documents/clans/$(clanId)).data.isPublic == true
+          || exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid))
+          || isAdmin()
+        );
+        allow list: if isSignedIn() && resource.data.authorUid is string && (
+          get(/databases/$(database)/documents/clans/$(clanId)).data.isPublic == true
+          || exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid))
+          || isAdmin()
+        );
+        allow create: if isVerified() && isValidId(clanId) && isValidId(msgId)
+          && isValidClanMessage(incoming())
+          && (notChatMuted() || isAdmin())
+          && exists(/databases/$(database)/documents/clans/$(clanId))
+          && (
+            get(/databases/$(database)/documents/clans/$(clanId)).data.isPublic == true
+            || exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid))
+          );
+        allow update: if false;
+        allow delete: if isVerified() && isValidId(clanId) && isValidId(msgId) && (
+          existing().authorUid == request.auth.uid
+          || get(/databases/$(database)/documents/clans/$(clanId)).data.ownerUid == request.auth.uid
+          || (exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid))
+              && get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data.role in ['owner', 'mod'])
+          || isAdmin()
+        );
+      }
+    }
+
+    match /dms/{threadId} {
+      allow get: if isVerified() && isValidId(threadId) && (resource == null || request.auth.uid in resource.data.participants || isAdmin());
+      allow list: if isVerified() && request.auth.uid in resource.data.participants;
+      allow create: if isVerified() && isValidId(threadId)
+        && isValidDmThread(incoming())
+        && request.auth.uid in incoming().participants
+        && (!('isGroup' in incoming()) || incoming().isGroup == false || incoming().creatorUid == request.auth.uid)
+        && (notChatMuted() || isAdmin());
+      allow update: if isVerified() && isValidId(threadId)
+        && isValidDmThread(incoming())
+        && request.auth.uid in existing().participants
+        && (notChatMuted() || isAdmin())
+        && (
+          (
+            incoming().participants == existing().participants
+            && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'updatedAt'])
+          )
+          || (
+            'isGroup' in existing() && existing().isGroup == true
+            && (existing().creatorUid == request.auth.uid || isAdmin())
+            && incoming().diff(existing()).affectedKeys().hasOnly(['participants', 'participantTags', 'groupName', 'lastMessage', 'updatedAt'])
+          )
+          || (
+            'isGroup' in existing() && existing().isGroup == true
+            && !(request.auth.uid in incoming().participants)
+            && incoming().participants.size() == existing().participants.size() - 1
+            && existing().participants.hasAll(incoming().participants)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['participants', 'participantTags', 'lastMessage', 'updatedAt'])
+          )
+        );
+      allow delete: if isVerified() && isValidId(threadId) && (isAdmin() || ('isGroup' in existing() && existing().isGroup == true && existing().creatorUid == request.auth.uid));
+
+      match /messages/{msgId} {
+        allow get: if isVerified() && isValidId(threadId) && isValidId(msgId)
+          && (request.auth.uid in get(/databases/$(database)/documents/dms/$(threadId)).data.participants || isAdmin());
+        allow list: if isVerified() && resource.data.senderUid is string
+          && (request.auth.uid in get(/databases/$(database)/documents/dms/$(threadId)).data.participants || isAdmin());
+        allow create: if isVerified() && isValidId(threadId) && isValidId(msgId)
+          && isValidDmMessage(incoming())
+          && (notChatMuted() || isAdmin())
+          && request.auth.uid in get(/databases/$(database)/documents/dms/$(threadId)).data.participants;
+        allow update: if false;
+        allow delete: if isVerified() && isValidId(threadId) && isValidId(msgId) && (existing().senderUid == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /services/{serviceId} {
+      allow get: if isSignedIn() && isValidId(serviceId) && existing().visibility == 'public';
+      allow list: if isSignedIn() && resource.data.visibility == 'public';
+      allow create: if isVerified() && isValidId(serviceId) && isValidService(incoming()) && notBanned();
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(serviceId) && (existing().sellerUid == request.auth.uid || isAdmin());
+    }
+
+    match /orders/{orderId} {
+      allow get: if isVerified() && isValidId(orderId) && (
+        existing().buyerUid == request.auth.uid || existing().sellerUid == request.auth.uid || isAdmin()
+      );
+      allow list: if isVerified() && (
+        resource.data.buyerUid == request.auth.uid || resource.data.sellerUid == request.auth.uid || isAdmin()
+      );
+      allow create: if isVerified() && isValidId(orderId)
+        && isValidOrder(incoming())
+        && incoming().buyerUid == request.auth.uid
+        && incoming().buyerUid != incoming().sellerUid
+        && incoming().status == 'escrow'
+        && !('rating' in incoming())
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/services/$(incoming().serviceId))
+        && incoming().sellerUid == get(/databases/$(database)/documents/services/$(incoming().serviceId)).data.sellerUid
+        && incoming().price == get(/databases/$(database)/documents/services/$(incoming().serviceId)).data.price
+        && notBanned();
+      allow update: if isVerified() && isValidId(orderId)
+        && isValidOrder(incoming())
+        && incoming().buyerUid == existing().buyerUid
+        && incoming().sellerUid == existing().sellerUid
+        && incoming().serviceId == existing().serviceId
+        && incoming().price == existing().price
+        && incoming().createdAt == existing().createdAt
+        && (
+          isAdmin()
+          || (
+            existing().sellerUid == request.auth.uid
+            && existing().status == 'escrow'
+            && incoming().status == 'delivered'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+          || (
+            existing().buyerUid == request.auth.uid
+            && existing().status == 'delivered'
+            && incoming().status == 'completed'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+          || (
+            existing().buyerUid == request.auth.uid
+            && existing().status == 'completed'
+            && !('rating' in existing())
+            && 'rating' in incoming()
+            && incoming().status == 'completed'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(orderId);
+    }
+
+    match /lfg/{lfgId} {
+      allow get: if isSignedIn() && isValidId(lfgId) && existing().visibility == 'public';
+      allow list: if isSignedIn() && resource.data.visibility == 'public';
+      allow create: if isVerified() && isValidId(lfgId) && isValidLfg(incoming()) && notBanned();
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(lfgId) && (existing().authorUid == request.auth.uid || isAdmin());
+    }
+
+    match /tournaments/{tournamentId} {
+      allow get: if isSignedIn() && isValidId(tournamentId) && (resource == null || existing().visibility == 'public');
+      allow list: if isSignedIn() && resource.data.visibility == 'public';
+      allow create: if isVerified() && isValidId(tournamentId) && isValidTournament(incoming()) && (notBanned() || isAdmin());
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(tournamentId) && (
+        (existing().creatorUid == request.auth.uid && (!('isBot' in existing()) || existing().isBot == false))
+        || isAdmin()
+      );
+
+      match /participants/{participantUid} {
+        allow get: if isSignedIn() && isValidId(tournamentId) && isValidId(participantUid) && (resource == null || existing().uid is string);
+        allow list: if isSignedIn() && resource.data.uid is string;
+        allow create: if isVerified() && isValidId(tournamentId) && isValidId(participantUid)
+          && participantUid == request.auth.uid
+          && isValidTournamentParticipant(incoming())
+          && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
+          && (notBanned() || isAdmin());
+        allow update: if isVerified() && isValidId(tournamentId) && isValidId(participantUid)
+          && participantUid == request.auth.uid
+          && isValidTournamentParticipant(incoming())
+          && incoming().uid == existing().uid
+          && incoming().diff(existing()).affectedKeys().hasOnly(['gamerTag', 'joinedAt'])
+          && (notBanned() || isAdmin());
+        allow delete: if isVerified() && isValidId(tournamentId) && isValidId(participantUid) && (participantUid == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /warns/{targetUid}/items/{warnId} {
+      allow get: if isVerified() && isValidId(targetUid) && isValidId(warnId) && (request.auth.uid == targetUid || isAdmin());
+      allow list: if isVerified() && (resource.data.targetUid == request.auth.uid || isAdmin());
+      allow create: if isAdmin() && isValidId(targetUid) && isValidId(warnId) && isValidWarning(incoming());
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(targetUid) && isValidId(warnId) && (request.auth.uid == targetUid || isAdmin());
+    }
+
+    match /reports/{reportId} {
+      allow get: if isAdmin() && isValidId(reportId);
+      allow list: if isAdmin() && resource.data.targetUid is string;
+      allow create: if isVerified() && isValidId(reportId) && isValidReport(incoming());
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(reportId);
+    }
+
+    match /badge_requests/{userId} {
+      allow get: if isVerified() && isValidId(userId) && (resource == null || request.auth.uid == userId || isAdmin());
+      allow list: if isVerified() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidBadgeRequest(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidId(userId)
+        && isValidBadgeRequest(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if isVerified() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /bot_messages/{targetUid}/items/{msgId} {
+      allow get: if isVerified() && isValidId(targetUid) && isValidId(msgId) && (resource == null || request.auth.uid == targetUid || isAdmin());
+      allow list: if isVerified() && (resource.data.targetUid == request.auth.uid || isAdmin());
+      allow create: if isVerified() && isValidId(targetUid) && isValidId(msgId)
+        && isValidBotMessage(incoming())
+        && incoming().targetUid == targetUid
+        && incoming().read is bool
+        && incoming().createdAt == request.time
+        && (
+          isAdmin()
+          || (request.auth.uid == targetUid && incoming().kind in ['welcome', 'tournament'] && (notBanned() || isAdmin()))
+        );
+      allow update: if isVerified() && isValidId(targetUid) && isValidId(msgId)
+        && request.auth.uid == targetUid
+        && isValidBotMessage(incoming())
+        && incoming().targetUid == existing().targetUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isVerified() && isValidId(targetUid) && isValidId(msgId) && (request.auth.uid == targetUid || isAdmin());
+    }
+
+    match /videos/{videoId} {
+      allow get: if isSignedIn() && isValidId(videoId) && (resource == null || resource.data.visibility == 'public');
+      allow list: if isSignedIn() && resource.data.visibility == 'public';
+      allow create: if isVerified() && isValidId(videoId)
+        && isValidVideo(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && (notBanned() || isAdmin());
+      allow update: if isVerified() && isValidId(videoId)
+        && isValidVideo(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && (
+          (existing().authorUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'server', 'hashtags', 'updatedAt']))
+          || isAdmin()
+        );
+      allow delete: if isVerified() && isValidId(videoId) && (existing().authorUid == request.auth.uid || isAdmin());
+
+      match /likes/{likerUid} {
+        allow get: if isSignedIn() && isValidId(videoId) && isValidId(likerUid) && (resource == null || existing().uid is string);
+        allow list: if isSignedIn() && resource.data.uid is string;
+        allow create: if isVerified() && isValidId(videoId) && isValidId(likerUid)
+          && likerUid == request.auth.uid
+          && isValidPostLike(incoming())
+          && exists(/databases/$(database)/documents/videos/$(videoId))
+          && (notBanned() || isAdmin());
+        allow update: if false;
+        allow delete: if isVerified() && isValidId(videoId) && isValidId(likerUid) && likerUid == request.auth.uid;
+      }
+    }
+  }
+}

@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>شغف | Shaghaf</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--img:url(bg.jpg);--bg:#0B0B12;--bg2:#14141F;--inp:#1E1E2F;--line:#2C2C44;--pri:#7C3AED;--sec:#3B82F6;--grad:linear-gradient(135deg,#7C3AED,#3B82F6);--bro:linear-gradient(135deg,#F97316,#EF4444);--red:#EF4444;--green:#10B981;--tx:#F8FAFC;--mut:#A3AEC2;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Tajawal',system-ui,sans-serif}
+html,body{height:100%;background:linear-gradient(rgba(11,11,18,.86),rgba(11,11,18,.94)),var(--img) center/cover fixed,var(--bg);color:var(--tx)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button,input,select,textarea{transition:background .2s,border-color .2s,opacity .2s,transform .15s}
+button:active{transform:scale(.97)}
+:focus-visible{outline:2px solid var(--sec);outline-offset:2px}
+[hidden]{display:none!important}
+#app{max-width:430px;height:100%;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden;background:linear-gradient(rgba(11,11,18,.5),rgba(11,11,18,.88)),var(--img) center 20%/cover,var(--bg);box-shadow:0 0 60px rgba(124,58,237,.18)}
+.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#top{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line);background:rgba(11,11,18,.55);backdrop-filter:blur(12px)}
+.ib{width:44px;height:44px;display:grid;place-items:center;border-radius:12px}
+.ib:hover{background:var(--inp)}
+.logo{font-weight:900;font-size:20px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+main{flex:1;overflow-y:auto;min-height:0}
+.sec{display:none}.sec.on{display:flex;flex-direction:column}.sec.fill{height:100%}
+nav{display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--line);padding:6px 0;background:rgba(11,11,18,.72);backdrop-filter:blur(14px)}
+.nv{width:56px;height:46px;color:var(--mut);display:grid;place-items:center;border-radius:12px}
+.nv.on{color:var(--tx)}.nv.on svg{filter:drop-shadow(0 0 6px var(--pri))}
+.fab{width:54px;height:54px;border-radius:18px;background:var(--grad);color:#fff;margin-top:-20px;box-shadow:0 6px 22px rgba(124,58,237,.55)}
+/* auth */
+#auth{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(circle at 50% 16%,rgba(124,58,237,.5),transparent 55%),radial-gradient(circle at 90% 62%,rgba(59,130,246,.28),transparent 45%),linear-gradient(rgba(11,11,18,.3),rgba(11,11,18,.85)),var(--img) center 12%/cover,var(--bg);overflow-y:auto}
+.brand{text-align:center;padding:22px 24px 12px}
+.brand h1{font-size:64px;font-weight:900;line-height:1.1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 24px rgba(124,58,237,.6))}
+.brand p{color:var(--mut);margin-top:8px;font-size:15px}
+.chips{display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:rgba(20,20,31,.7);font-size:12px;color:var(--mut)}
+.asheet{background:rgba(20,20,31,.88);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:28px 28px 0 0;padding:22px 20px 20px}
+.bw{width:100%;height:52px;border-radius:16px;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:10px}
+.bs{background:var(--inp);border:1px solid var(--line);margin-bottom:10px}.bs:hover{border-color:var(--pri)}
+.bs b{width:24px;height:24px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-size:13px}
+.bp{background:var(--grad);color:#fff;box-shadow:0 6px 22px rgba(124,58,237,.45)}
+.or{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12px;margin:14px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.fld{width:100%;height:50px;padding:0 14px;background:var(--inp);border:1px solid var(--line);border-radius:14px;color:var(--tx);font-size:15px;margin-bottom:10px}
+.fld:focus{border-color:var(--pri);outline:none}
+.terms{font-size:11px;color:var(--mut);text-align:center;margin-top:12px}
+/* home */
+.sv{display:flex;gap:12px;padding:12px 14px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:none}
+.sv::-webkit-scrollbar{display:none}
+.si{min-width:66px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--mut)}
+.ring{width:58px;height:58px;border-radius:50%;padding:2.5px;background:var(--line)}
+.si.on .ring{background:var(--grad);box-shadow:0 0 14px rgba(124,58,237,.6)}.si.on{color:var(--tx)}
+.ring i{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:var(--bg);border:2px solid var(--bg);font-style:normal;font-weight:900;font-size:13px}
+.sb{display:flex;gap:8px;padding:12px 14px}
+.sbox{flex:1;display:flex;align-items:center;gap:8px;padding:0 12px;height:44px;background:var(--inp);border:1px solid var(--line);border-radius:14px;color:var(--mut)}
+.sbox input{flex:1;background:none;border:0;color:var(--tx);outline:none;font-size:14px}
+.post{margin:10px 12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(20,20,31,.72);backdrop-filter:blur(8px)}.post.pin{border-color:#F59E0B;box-shadow:0 0 18px rgba(245,158,11,.22)}
+.ph{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.av{width:40px;height:40px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-weight:900;flex:none}
+.rb{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--c,var(--line))}
+.mut{font-size:12px;color:var(--mut)}
+.tag{color:#7FB0FF;font-weight:700;font-size:12px;margin-bottom:4px}
+.lk{display:inline-flex;align-items:center;gap:6px;margin-top:8px;color:var(--mut);min-height:44px;padding:0 6px}
+.lk.on{color:var(--red)}.lk.on svg{fill:var(--red)}
+.empty{padding:40px 20px;text-align:center;color:var(--mut)}
+/* chat */
+.contacts{flex:none;max-height:38%;overflow-y:auto;border-bottom:1px solid var(--line)}
+.ct{display:flex;align-items:center;gap:12px;padding:10px 16px;width:100%;text-align:start}
+.ct:hover{background:var(--bg2)}
+.hd{padding:10px 16px;background:rgba(20,20,31,.8);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.msgs{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.bub{max-width:82%;padding:9px 13px;border-radius:14px;background:var(--inp);border:1px solid var(--line);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.bub.me{background:var(--pri);border-color:var(--pri);align-self:flex-start}.bub.bot{background:#312E81;border-color:#4338CA;align-self:flex-end}
+.cin{display:flex;gap:8px;padding:10px;background:rgba(11,11,18,.72);border-top:1px solid var(--line)}
+.cin input{flex:1;height:46px;padding:0 14px;background:var(--inp);border:1px solid var(--line);border-radius:14px;color:var(--tx);font-size:14px}
+.cin input:focus{border-color:var(--pri);outline:none}
+.cin button{width:46px;height:46px;border-radius:14px;background:var(--grad);color:#fff;display:grid;place-items:center}
+/* live / profile */
+.live{margin:16px;padding:20px;border-radius:20px;text-align:center;background:linear-gradient(135deg,#B91C1C,#EA580C);box-shadow:0 8px 28px rgba(239,68,68,.3)}
+.live button{margin-top:12px;background:#fff;color:#B91C1C;padding:12px 24px;border-radius:14px;font-weight:700}
+.pf{text-align:center;padding:24px 16px;border-bottom:1px solid var(--line)}
+.pf .av{width:88px;height:88px;font-size:34px;margin:0 auto 10px;box-shadow:0 0 26px rgba(124,58,237,.5)}
+.tiers{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tiers button{height:46px;border-radius:12px;font-weight:700;color:#fff}
+.bdg{width:17px;height:17px;vertical-align:-3px;margin-inline-start:4px;color:#8B5CF6;flex:none}.bdg.own{color:#F59E0B;filter:drop-shadow(0 0 4px rgba(245,158,11,.7))}
+.pinl{font-size:11px;color:#F59E0B;font-weight:700}
+.adm{font-size:11px;padding:6px 10px;border-radius:10px;border:1px solid #F59E0B;color:#F59E0B;min-height:32px}
+.lg{display:flex;gap:6px;justify-content:center;margin-bottom:18px}.lg button{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:rgba(20,20,31,.7);font-size:12px;color:var(--mut)}.lg button.on{color:#fff;border-color:var(--pri);background:var(--pri)}
+.gd{background:rgba(245,158,11,.12);color:#FCD34D;border:1px solid rgba(245,158,11,.45)}.wn{background:rgba(59,130,246,.12);color:#93C5FD;border:1px solid rgba(59,130,246,.45)}
+.seg{display:flex;gap:6px;padding:12px 14px}.seg button{flex:1;height:40px;border-radius:12px;background:rgba(20,20,31,.7);border:1px solid var(--line);font-size:13px;color:var(--mut)}.seg button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.card{margin:10px 12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(20,20,31,.72)}
+.row2{display:flex;justify-content:space-between;align-items:center;gap:8px}.pr{font-weight:900;color:#FCD34D}
+.sm{padding:8px 14px;border-radius:10px;background:var(--grad);color:#fff;font-size:13px;font-weight:700;min-height:36px}
+.cvr{display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line);font-size:14px}.chips2{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px}.cvh{padding:12px 16px 4px;font-size:14px}
+html.lite *{backdrop-filter:none!important;box-shadow:none!important;filter:none!important;transition:none!important}html.lite{--img:none}
+.nv{position:relative}.dot{position:absolute;top:8px;inset-inline-end:10px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}
+.mo{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);color:var(--mut);flex:none}.xx{margin-inline-start:8px;color:var(--mut);font-size:12px}
+.rooms{display:flex;gap:6px;overflow-x:auto;padding:8px 14px;scrollbar-width:none;flex:none}.rooms .chip{white-space:nowrap}.chip.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.story{width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;padding:30px;text-align:center;font-size:24px;font-weight:900;color:#fff}.story .bw{max-width:240px}
+/* modal */
+.modal{position:absolute;inset:0;z-index:80;display:none;align-items:flex-end;background:rgba(11,11,18,.8);backdrop-filter:blur(8px)}
+.modal.on{display:flex}
+.sheet{width:100%;max-height:92%;overflow-y:auto;background:var(--bg2);border:1px solid var(--line);border-radius:24px 24px 0 0;padding:20px;display:flex;flex-direction:column;gap:10px}
+.sheet h3{font-size:17px}
+.sheet label{font-size:12px;color:var(--mut)}
+.sheet select,.sheet textarea{width:100%;padding:12px;background:var(--inp);border:1px solid var(--line);border-radius:12px;color:var(--tx);font-size:14px}
+.sheet textarea{resize:none}
+.dg{background:rgba(239,68,68,.12);color:#FCA5A5;border:1px solid rgba(239,68,68,.4)}
+#toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);max-width:90%;background:var(--bg2);border:1px solid var(--pri);padding:10px 16px;border-radius:12px;font-size:13px;z-index:99;opacity:0;pointer-events:none;text-align:center}
+#toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-live" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+<symbol id="i-badge" viewBox="0 0 24 24"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z" fill="currentColor"/><path d="M8 12.2l2.7 2.7 5-5.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-hub" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14"/></symbol>
+</svg>
+
+<div id="app">
+<header id="top" hidden>
+  <button class="ib" id="menuBtn" aria-label="القائمة"><svg class="ic"><use href="#i-menu"/></svg></button>
+  <span class="logo">شغف</span>
+  <span style="display:flex"><button class="ib" id="notifBtn" aria-label="الإشعارات" style="position:relative"><svg class="ic"><use href="#i-bell"/></svg><i class="dot" id="nDot" hidden></i></button><button class="ib" id="botBtn" aria-label="مساعد شغف"><svg class="ic"><use href="#i-bot"/></svg></button></span>
+</header>
+
+<main id="main">
+  <section class="sec" id="home">
+    <div class="sv" id="servers"></div>
+    <div class="sv" id="stories"></div>
+    <div class="sb">
+      <label class="sbox"><svg class="ic"><use href="#i-search"/></svg><input id="q" type="search" placeholder="ابحث في المنشورات والمهارات" aria-label="بحث"></label>
+      <button class="ib" id="storyBtn" aria-label="إضافة ستوري" style="background:var(--inp);border:1px solid var(--line)"><svg class="ic"><use href="#i-live"/></svg></button>
+    </div>
+    <div id="posts"></div>
+  </section>
+
+  <section class="sec fill" id="chat">
+    <div class="seg"><button data-ct="dm" class="on">الأصدقاء</button><button data-ct="rm">الرومات</button></div>
+    <div id="pDm" style="flex:1;min-height:0;display:flex;flex-direction:column"><div class="contacts" id="contacts" style="max-height:none;flex:1"></div></div>
+    <div id="pRm" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"><div class="rooms" id="roomBar"></div><div class="hd"><strong id="roomName"></strong><span class="mut" id="stat"></span></div><div class="msgs" id="gmsgs"></div>
+    <form class="cin" id="gform"><input id="gin" placeholder="اكتب رسالة" autocomplete="off" aria-label="رسالة"><button aria-label="إرسال"><svg class="ic"><use href="#i-send"/></svg></button></form></div>
+  </section>
+  <section class="sec fill" id="dm">
+    <div class="hd"><button id="dmBack" class="mo" style="width:auto;padding:0 12px" aria-label="رجوع">رجوع</button><strong id="dmName" style="cursor:pointer"></strong><button class="adm" id="dmMore">خيارات</button></div>
+    <div class="msgs" id="dmMsgs"></div>
+    <form class="cin" id="dmForm"><input id="dmIn" placeholder="اكتب رسالة" autocomplete="off" aria-label="رسالة"><button aria-label="إرسال"><svg class="ic"><use href="#i-send"/></svg></button></form>
+  </section>
+
+  <section class="sec fill" id="bot">
+    <div class="hd"><div><strong>مساعد شغف</strong><div class="mut">أجيب فقط عن تطبيق شغف. اكتب «دعم بشري» لمحادثة مشرف.</div></div></div>
+    <div class="msgs" id="bmsgs"><div class="bub bot">مرحبًا، اسألني عن النشر أو الأصدقاء أو السيرفرات أو الخصوصية.</div></div>
+    <form class="cin" id="bform"><input id="bin" placeholder="اسأل المساعد" autocomplete="off" aria-label="سؤال"><button aria-label="إرسال"><svg class="ic"><use href="#i-send"/></svg></button></form>
+  </section>
+
+  <section class="sec" id="live">
+    <div class="live"><h2>البث المباشر</h2><p style="font-size:13px;margin-top:4px">شارك لحظات اللعب والمونتاج مع متابعيك</p><button id="liveBtn">ابدأ البث</button></div>
+    <div class="empty" id="liveSt">لا يوجد بث نشط. اضغط «ابدأ البث» لتجربة الواجهة.</div>
+  </section>
+
+  <section class="sec" id="profile">
+    <div class="pf">
+      <div class="av" id="pAv"></div>
+      <h2 id="pName"></h2>
+      <p class="mut" id="pBio" style="margin-top:4px"></p>
+      <p class="mut" id="pTier" style="margin-top:4px"></p>
+      <button class="bw gd" id="admB" hidden style="margin-top:12px"><svg class="bdg own"><use href="#i-badge"/></svg><span>أدوات المالك</span></button>
+      <button class="bw bp" id="addF" style="margin-top:14px">إضافة صديق</button>
+      <button class="bw bs" id="editP" hidden style="margin-top:12px">تعديل الملف</button>
+      <button class="bw bs" id="moreB" hidden style="margin-top:12px">خيارات الحساب</button>
+      <div class="tiers" id="tiers" hidden>
+        <button data-t="normal" style="background:var(--green);color:#052e21">صديق عادي</button>
+        <button data-t="good" style="background:var(--sec)">صديق جيد</button>
+        <button data-t="bro" style="background:var(--bro)">Bro 🔥</button>
+      </div>
+    </div>
+    <div id="pCv"></div>
+  </section>
+<section class="sec" id="hub"><div class="seg"><button data-h="srv" class="on">خدمات</button><button data-h="lfg">فريق</button><button data-h="trn">بطولات</button><button id="toLive">بث</button></div><div id="hubBody"></div></section>
+</main>
+
+<nav id="nav" hidden>
+  <button class="nv on" data-s="home" aria-label="الرئيسية"><svg class="ic"><use href="#i-home"/></svg></button>
+  <button class="nv" data-s="chat" aria-label="الرسائل"><svg class="ic"><use href="#i-chat"/></svg><i class="dot" id="cDot" hidden></i></button>
+  <button class="nv fab" id="fab" aria-label="منشور جديد"><svg class="ic"><use href="#i-plus"/></svg></button>
+  <button class="nv" data-s="hub" aria-label="السوق"><svg class="ic"><use href="#i-hub"/></svg></button>
+  <button class="nv" data-s="profile" id="meBtn" aria-label="حسابي"><svg class="ic"><use href="#i-user"/></svg></button>
+</nav>
+
+<div id="auth">
+  <div class="brand"><div class="lg"><button data-l="ar">العربية</button><button data-l="en">English</button><button data-l="fr">Français</button></div><h1>شغف</h1><p>مجتمع اللاعبين وصنّاع المحتوى. تبادل المهارات وابدأ اللعب.</p>
+    <div class="chips"><span class="chip">سيرفرات متخصصة</span><span class="chip">بث مباشر</span><span class="chip">أصدقاء Bro</span></div></div>
+  <div class="asheet">
+    <select class="fld" id="age" aria-label="العمر"><option value="0">18 سنة فأكثر</option><option value="1">أقل من 18 سنة</option></select>
+    <button class="bw bs" data-p="Google"><b>G</b>المتابعة عبر Google</button>
+    <button class="bw bs" data-p="Facebook"><b>f</b>المتابعة عبر Facebook</button>
+    <div class="or">أو</div>
+    <form id="lform"><input class="fld" id="nick" maxlength="16" placeholder="اسمك المستعار (Gamer Tag)" autocomplete="off" aria-label="الاسم المستعار"><button class="bw bp">ابدأ الآن</button></form>
+    <p class="terms"><button id="tLink" style="text-decoration:underline;color:inherit;font-size:inherit">بالمتابعة توافق على شروط الاستخدام وسياسة الخصوصية.</button></p>
+  </div>
+</div>
+
+<div class="modal" id="mModal"><div class="sheet"><h3>تنبيه من المشرف الآلي</h3><p id="modTxt" style="font-size:14px;line-height:1.7"></p><p class="mut">الفلاتر الآلية قد تخطئ، ويمكنك طلب مراجعة بشرية.</p><button class="bw bp" id="objBtn">اعتراض على العقوبة</button><button class="bw bs" data-c="mModal">فهمت</button></div></div>
+
+<div class="modal" id="pModal"><div class="sheet"><h3>منشور جديد</h3><label for="pSrv">السيرفر</label><select id="pSrv"></select><label for="pTxt">النص</label><textarea id="pTxt" rows="4" maxlength="400" placeholder="اكتب طلبك أو خدمتك"></textarea><button class="bw bp" id="pGo">انشر</button><button class="bw bs" data-c="pModal">إلغاء</button></div></div>
+
+<div class="modal" id="sModal"><div class="sheet"><h3>الإعدادات</h3><label for="lang">اللغة</label><select id="lang"><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option></select><label for="lite">الوضع الخفيف (للأجهزة الضعيفة)</label><select id="lite"><option value="0">غير مفعلة</option><option value="1">مفعلة</option></select><label for="dnd">وضع عدم الإزعاج</label><select id="dnd"><option value="0">غير مفعلة</option><option value="1">مفعلة</option></select><label for="priv">خصوصية الحساب</label><select id="priv"><option value="0">عام</option><option value="1">خاص</option></select><label for="minor">حماية القاصرين (أقل من 18)</label><select id="minor"><option value="1">مفعلة: حظر رسائل الغرباء</option><option value="0">غير مفعلة</option></select><button class="bw bs" id="lBtn">الشروط والخصوصية</button><button class="bw bs" id="vBtn">علامة التوثيق (اشتراك)</button><button class="bw bs" id="oBtn">وضع المالك</button><button class="bw bp" id="sSave">حفظ</button><button class="bw bs" id="outBtn">تسجيل الخروج</button><button class="bw dg" id="delBtn">حذف الحساب نهائيًا</button><button class="bw bs" data-c="sModal">إغلاق</button></div></div>
+
+<div class="modal" id="vModal"><div class="sheet"><h3>علامة التوثيق <svg class="bdg"><use href="#i-badge"/></svg></h3><p style="font-size:14px;line-height:1.8">شارة سداسية بجانب اسمك تدل على حساب موثّق، وتمنح منشوراتك أولوية الظهور في كل السيرفرات.</p><p class="mut">الدفع الحقيقي يحتاج ربط بوابة دفع. هذا الزر للتفعيل التجريبي فقط.</p><button class="bw bp" id="vGo">تفعيل تجريبي</button><button class="bw bs" data-c="vModal">إغلاق</button></div></div>
+<div class="modal" id="oModal"><div class="sheet"><h3>وضع المالك</h3><p class="mut" id="oHint"></p><input class="fld" id="oCode" type="password" placeholder="رمز المالك" autocomplete="off"><button class="bw bp" id="oGo">تأكيد</button><button class="bw bs" data-c="oModal">إلغاء</button></div></div>
+<div class="modal" id="wModal"><div class="sheet"><h3 id="wTitle"></h3><p id="wTxt" style="font-size:14px;line-height:1.8"></p><button class="bw bs" data-c="wModal">إغلاق</button></div></div>
+<div class="modal" id="aModal"><div class="sheet"><h3 id="aTitle"></h3>
+<button class="bw gd" id="aBadge"><svg class="bdg own"><use href="#i-badge"/></svg><span id="aBadgeT"></span></button>
+<button class="bw wn" id="aWarn"><svg class="ic"><use href="#i-warn"/></svg><span>إرسال تنبيه</span></button>
+<div id="aWbox" hidden><textarea id="aTxt" rows="3" maxlength="200" placeholder="نص التنبيه"></textarea><button class="bw bp" id="aSend" style="margin-top:10px">إرسال التنبيه</button></div>
+<button class="bw dg" id="aBan"><svg class="ic"><use href="#i-ban"/></svg><span id="aBanT"></span></button>
+<button class="bw bs" data-c="aModal">إغلاق</button></div></div>
+<div class="modal" id="fModal"><div class="sheet"><h3 id="fT"></h3><input class="fld" id="f1" autocomplete="off"><input class="fld" id="f2" autocomplete="off"><input class="fld" id="f3" autocomplete="off"><button class="bw bp" id="fGo">انشر</button><button class="bw bs" data-c="fModal">إلغاء</button></div></div>
+<div class="modal" id="rModal"><div class="sheet"><h3 id="rT"></h3><label for="pay">طريقة الدفع</label><select id="pay"><option>Flouci</option><option>D17</option><option>e-Dinar</option><option>PayPal</option><option>بطاقة بنكية</option></select><p class="mut">الدفع تجريبي: يُحجز المبلغ لدى المنصة حتى تؤكد الاستلام.</p><button class="bw bp" id="rGo">تأكيد وحجز المبلغ</button><button class="bw bs" data-c="rModal">إلغاء</button></div></div>
+<div class="modal" id="eModal"><div class="sheet"><h3>تعديل الملف</h3><input class="fld" id="e1" maxlength="80" placeholder="نبذة عنك"><input class="fld" id="e2" maxlength="80" placeholder="مهارات مفصولة بفاصلة"><input class="fld" id="e3" maxlength="30" placeholder="ID اللعبة"><input class="fld" id="e4" maxlength="30" placeholder="الرتبة"><input class="fld" id="e5" maxlength="80" placeholder="الألعاب المفضلة (مفصولة بفاصلة)"><button class="bw bp" id="eGo">حفظ</button><button class="bw bs" data-c="eModal">إلغاء</button></div></div>
+<div class="modal" id="uModal"><div class="sheet"><h3 id="uT"></h3><button class="bw wn" id="uRep"><svg class="ic"><use href="#i-warn"/></svg><span>إبلاغ عن الحساب</span></button><button class="bw bs" id="uMute"><span id="uMuteT"></span></button><button class="bw dg" id="uBlk"><svg class="ic"><use href="#i-ban"/></svg><span id="uBlkT"></span></button><button class="bw bs" data-c="uModal">إغلاق</button></div></div>
+<div class="modal" id="nModal"><div class="sheet"><h3>الإشعارات</h3><div id="nList"></div><button class="bw bs" data-c="nModal">إغلاق</button></div></div>
+<div class="modal" id="stModal"><div class="story" id="stBox"><div class="mut" id="stU"></div><p id="stT"></p><button class="bw bs" data-c="stModal">إغلاق</button></div></div>
+<div class="modal" id="lModal"><div class="sheet"><h3>الشروط وسياسة الخصوصية</h3><p style="font-size:13px;line-height:1.9">• نجمع الاسم المستعار والمنشورات والرسائل لتشغيل الخدمة فقط.<br>• لا نبيع بياناتك لأي طرف.<br>• يُمنع الإساءة والتنمر والمحتوى الجنسي والعنيف والاحتيال.<br>• المخالفة تُعاقَب بتحذير ثم كتم مؤقت متدرج، ولك حق الاعتراض.<br>• لمن دون 18 سنة حماية إضافية، ولا يشترون من السوق.<br>• يمكنك حذف حسابك وبياناتك في أي وقت من الإعدادات.</p><p class="mut">هذا نموذج أولي. راجعه مع مختص قانوني قبل النشر في المتاجر.</p><button class="bw bs" data-c="lModal">إغلاق</button></div></div>
+<div id="toast" role="status"></div>
+</div>
+
+<script>
+const CL={};
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const h=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const st={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},clear(){try{localStorage.clear()}catch(e){}}};
+let me=st.get('sg_user',null),mod=st.get('sg_mod',{n:0,until:0}),tiers=st.get('sg_tiers',{}),opts=st.get('sg_opts',{priv:'0',minor:'1'}),cur='',srv='الكل',tt;
+let badges=st.get('sg_badges',{'مؤسس شغف':'own'}),boosted=st.get('sg_boost',{});
+const WELCOME='أهلًا بك في شغف! هذا مجتمعك للاعبين والمبدعين. انشر مهارتك، انضم إلى سيرفر لعبتك، وأضف أصدقاءك كـ Bro. التزم بالأدب ليبقى المجتمع نظيفًا. استمتع!';
+const sv=()=>{st.set('sg_badges',badges);st.set('sg_boost',boosted)};
+let owner=()=>!!me&&me==st.get('sg_owner',null);
+const score=u=>badges[u]=='own'?2:(boosted[u]||badges[u]=='sub'?1:0);
+function badge(n){const t=badges[n];if(!t)return null;const N='http://www.w3.org/2000/svg',s=document.createElementNS(N,'svg'),u=document.createElementNS(N,'use');s.setAttribute('class','bdg'+(t=='own'?' own':''));s.setAttribute('aria-label','حساب موثّق');u.setAttribute('href','#i-badge');s.append(u);return s}
+function grant(n){if(badges[n]){delete badges[n];delete boosted[n]}else{badges[n]='gift';boosted[n]=1}sv();render();renderContacts();if(tgt==n)toolsUI();toast(badges[n]?'مُنح '+n+' علامة التوثيق ودعم الظهور':'سُحبت العلامة من '+n)}
+const LB={'الكل':['الكل','All','Tous'],'__you':['لك','For you','Pour vous'],'Global':['عالمي','Global','Monde'],'MENA':['الشرق الأوسط وشمال أفريقيا','MENA','MENA'],'Europe':['أوروبا','Europe','Europe'],'North America':['أمريكا الشمالية','North America','Amérique du Nord'],'Latin America':['أمريكا اللاتينية','Latin America','Amérique latine'],'Asia':['آسيا','Asia','Asie'],'Africa':['أفريقيا','Africa','Afrique'],'Clans & LFG':['كلانات','Clans & LFG','Clans & LFG'],'Dev & Design':['تصميم وبرمجة','Dev & Design','Dev & Design']};
+const LI=()=>['ar','en','fr'].indexOf(lang);
+const TIER={bro:['Bro 🔥',0,'#F97316'],good:['صديق جيد',1,'#3B82F6'],normal:['صديق عادي',2,'#10B981']};
+const SV=[['الكل','All'],['__you','YOU'],['Global','GL'],['MENA','MENA'],['Europe','EU'],['North America','NA'],['Latin America','LATAM'],['Asia','AS'],['Africa','AF'],['Free Fire','FF'],['PUBG Mobile','PUBG'],['Call of Duty','COD'],['Warzone','WZ'],['Fortnite','FN'],['Valorant','VAL'],['CS2','CS2'],['League of Legends','LoL'],['Wild Rift','WR'],['Dota 2','D2'],['Apex Legends','APX'],['Overwatch 2','OW'],['Rainbow Six Siege','R6'],['Minecraft','MC'],['Roblox','RBX'],['GTA Online','GTA'],['Rocket League','RL'],['Brawl Stars','BS'],['Clash of Clans','CoC'],['Clash Royale','CR'],['Mobile Legends','ML'],['Honor of Kings','HoK'],['Genshin Impact','GI'],['EA FC','FC'],['eFootball','eF'],['Among Us','AU'],['Fall Guys','FG'],['World of Warcraft','WoW'],['Rust','RST'],['Destiny 2','DST'],['Delta Force','DF'],['Editors','ED'],['Dev & Design','DEV'],['Clans & LFG','LFG']];
+const DEMO=[['ياسين','مصمم شعارات'],['سلمى','محررة مونتاج'],['رامي','لاعب Free Fire'],['وسيم','لاعب ومطور']];
+let posts=st.get('sg_posts',null)||[{u:'مؤسس شغف',s:'Clans & LFG',t:'أهلًا بكم في شغف. هنا تلتقون وتتبادلون المهارات وتلعبون معًا. انشروا وابدؤوا.',l:0,k:0},{u:'وسيم',s:'Free Fire',t:'أبحث عن أعضاء لتشكيل سكواد (الرتبة المطلوبة: هيرويك).',l:0,k:0},{u:'سلمى',s:'Editors',t:'أقدّم مونتاج كليبات قصيرة مقابل تصميم شعار لقناتي.',l:0,k:0}];
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2800)}
+const openM=id=>$('#'+id).classList.add('on'),closeM=id=>$('#'+id).classList.remove('on');
+
+/* ---- Auto-Mod ---- */
+const norm=t=>t.toLowerCase().replace(/[\u064B-\u065F\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/(.)\1+/g,'$1');
+const BAD=['زب','زبي','كس','قحبة','طبونة','zebi','tobouna','t7in','9a7ba'].map(norm);
+const SEP=/[^a-z0-9\u0621-\u064A]+/g;
+function hasBad(t){const n=norm(t);if(n.split(SEP).some(w=>BAD.includes(w)))return true;const c=n.replace(SEP,'');return BAD.some(b=>b.length>=5&&c.includes(b))}
+function guard(){if(banned[me]){toast('حسابك محظور من الإدارة');return false}const r=mod.until-Date.now();if(r>0){const m=Math.ceil(r/6e4);toast('أنت محظور مؤقتًا من الكتابة. المتبقي: '+(m>=1440?Math.ceil(m/1440)+' يوم':m>=60?Math.ceil(m/60)+' ساعة':m+' دقيقة'));return false}return true}
+function upStat(){$('#stat').textContent='الفرص: '+Math.max(0,5-mod.n)+'/5'}
+function violate(){mod.n++;const n=mod.n,w=2*(n-4);const lab=['تحذير فقط','1 ساعة','1 يوم','1 أسبوع'][n-1]||(w==2?'أسبوعان':w+' أسابيع');const ms=[0,36e5,864e5,6048e5][n-1];mod.until=Date.now()+(ms===undefined?6048e5*w:ms);if(ms===0)mod.until=0;st.set('sg_mod',mod);$('#modTxt').textContent='رصد المشرف الآلي لفظًا مخالفًا. العقوبة: '+lab+'. الفرص المتبقية: '+Math.max(0,5-n)+' من 5.';openM('mModal');upStat()}
+const check=t=>guard()&&(hasBad(t)?(violate(),false):true);
+$('#objBtn').onclick=()=>{closeM('mModal');toast('أُرسل اعتراضك لمراجعة المشرفين')};
+
+/* ---- navigation ---- */
+function show(id){if(id=='hub')renderHub();$$('.sec').forEach(s=>s.classList.toggle('on',s.id==id));$$('.nv[data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s==id));$('#main').scrollTop=0}
+$$('.nv[data-s]').forEach(b=>b.onclick=()=>b.id=='meBtn'?openProfile(me,'حسابك الشخصي'):show(b.dataset.s));
+$$('[data-c]').forEach(b=>b.onclick=()=>closeM(b.dataset.c));
+$('#botBtn').onclick=()=>show('bot');$('#menuBtn').onclick=()=>{$('#priv').value=opts.priv;$('#minor').value=opts.minor;openM('sModal')};
+$('#fab').onclick=()=>openM('pModal');$('#storyBtn').onclick=()=>openF('story');
+
+/* ---- auth ---- */
+function enter(n){me=n;if($('#age').value=='1'){st.set('sg_minor',true);opts.minor='1';st.set('sg_opts',opts)}st.set('sg_user',n);$('#auth').hidden=true;$('#top').hidden=false;$('#nav').hidden=false;render();renderContacts();renderStories();renderRoom();dot();nDot();upStat();show('home');inbox();if(!st.get('sg_wsent',false)){st.set('sg_wsent',true);setTimeout(()=>toast('وصلتك رسالة ترحيب من مؤسس شغف'),900)}}
+$$('[data-p]').forEach(b=>b.onclick=()=>{enter('لاعب '+b.dataset.p);toast('وضع تجريبي: الربط الحقيقي مع '+b.dataset.p+' يحتاج سيرفر')});
+$('#lform').onsubmit=e=>{e.preventDefault();const v=$('#nick').value.trim();if(v.length<3){toast('الاسم المستعار 3 أحرف على الأقل');return}if(hasBad(v)){toast('هذا الاسم غير مسموح');return}enter(v)};
+
+/* ---- home ---- */
+function renderServers(){const b=$('#servers');b.replaceChildren();SV.forEach(([v,i])=>{const x=h('button','si'+(v==srv?' on':''));const r=h('span','ring');r.append(h('i',null,i));x.append(r,h('span',null,LB[v]?LB[v][LI()]:v));x.onclick=()=>{srv=v;renderServers();render()};b.append(x)})}
+function render(){const q=$('#q').value.trim().toLowerCase(),box=$('#posts');box.replaceChildren();
+const list=posts.filter(p=>(!banned[p.u]||owner())&&!blocked[p.u]&&(srv=='الكل'||(srv=='__you'?mine(p):p.s==srv)||score(p.u)>0)&&(!q||(p.t+p.u).toLowerCase().includes(q))).map((p,i)=>[p,i]).sort((a,b)=>score(b[0].u)-score(a[0].u)||a[1]-b[1]).map(x=>x[0]);
+if(!list.length){box.append(h('div','empty','لا نتائج. جرّب سيرفرًا آخر أو انشر أول منشور.'));return}
+list.forEach(p=>{const sc=score(p.u),d=h('article','post'+(sc>1?' pin':'')),row=h('div','ph'),hd=h('button');hd.style.cssText='display:flex;align-items:center;gap:10px;text-align:start;flex:1';const a=h('span','av rb',p.u[0]);const tr=tiers[p.u];if(tr)a.style.setProperty('--c',TIER[tr][2]);const w=h('span'),nm=h('strong',null,p.u),bd=badge(p.u);if(bd)nm.append(bd);const info=h('div','mut','سيرفر: '+p.s);if(sc)info.append(h('span','pinl',' · مميز'));if(banned[p.u])info.append(h('span','pinl',' · محظور'));w.append(nm,info);hd.append(a,w);hd.onclick=()=>openProfile(p.u);row.append(hd);if(owner()&&p.u!=me){const g=h('button','adm','أدوات المالك');g.onclick=()=>openTools(p.u);row.append(g)}
+const lk=h('button','lk'+(p.k?' on':''));lk.setAttribute('aria-label','إعجاب');lk.innerHTML='<svg class="ic"><use href="#i-heart"/></svg>';lk.append(h('span',null,String(p.l)));lk.onclick=()=>{p.k=!p.k;p.l+=p.k?1:-1;if(CL.like)CL.like(p);render()};const cm=h('button','lk');cm.setAttribute('aria-label','تعليقات');cm.innerHTML='<svg class="ic"><use href="#i-chat"/></svg>';cm.append(h('span',null,String((p.c||[]).length)));cm.onclick=()=>{p.o=!p.o;render()};
+const sh=h('button','lk');sh.setAttribute('aria-label','مشاركة');sh.innerHTML='<svg class="ic"><use href="#i-share"/></svg>';sh.onclick=()=>share(p);
+if(p.u!=me){const mo=h('button','mo','⋯');mo.setAttribute('aria-label','خيارات');mo.onclick=()=>openUser(p.u);row.append(mo)}
+const bar=h('div','row2');bar.append(lk,cm,sh);d.append(row,h('p',null,p.t),bar);
+if(p.o){const cl=h('div');(p.c||[]).forEach(c=>{const x=h('div','mut');x.append(h('strong',null,c.u+': '),document.createTextNode(c.t));cl.append(x)});const f=h('form','cin'),i=h('input'),b=h('button');i.placeholder='اكتب تعليقًا';i.setAttribute('autocomplete','off');b.setAttribute('aria-label','إرسال');b.innerHTML='<svg class="ic"><use href="#i-send"/></svg>';f.append(i,b);f.onsubmit=e=>{e.preventDefault();const v=i.value.trim();if(!v||!check(v))return;(p.c=p.c||[]).push({u:me,t:v});addXp(1);if(CL.comment)CL.comment(p,{u:me,t:v});else savePosts();render()};d.append(cl,f)}
+box.append(d)})}
+$('#q').oninput=render;
+$('#pGo').onclick=()=>{const t=$('#pTxt').value.trim();if(!t)return;if(!check(t)){closeM('pModal');$('#pTxt').value='';return}const np={u:me,s:$('#pSrv').value,t,l:0,k:0,c:[],v:(8+Math.floor(Math.random()*30))*(score(me)+1)};addXp(10);if(CL.post)CL.post(np);else{posts.unshift(np);savePosts();setTimeout(()=>{(np.c=np.c||[]).push({u:'سلمى',t:'منشور رائع'});savePosts();notify('سلمى علّقت على منشورك','سلمى');render()},2500)}$('#pTxt').value='';closeM('pModal');srv='الكل';renderServers();render();show('home')};
+
+/* ---- profile & friends ---- */
+function openProfile(n,b){cur=n;const d=DEMO.find(x=>x[0]==n);$('#pAv').textContent=n[0];const pn=$('#pName');pn.textContent=n;const bd=badge(n);if(bd)pn.append(bd);$('#pBio').textContent=(prof[n]&&prof[n].bio)||b||(n=='مؤسس شغف'?'مصمم تطبيق شغف':d?d[1]:'عضو في شغف');const t=tiers[n];$('#pTier').textContent=t?'تصنيفه عندك: '+TIER[t][0]:'';$('#addF').hidden=n==me;$('#tiers').hidden=true;const g=$('#admB');g.hidden=!(owner()&&n!=me);cv(n);$('#editP').hidden=n!=me;$('#moreB').hidden=n==me;show('profile')}
+$('#addF').onclick=()=>{$('#tiers').hidden=!$('#tiers').hidden};
+$$('#tiers button').forEach(b=>b.onclick=()=>{tiers[cur]=b.dataset.t;st.set('sg_tiers',tiers);$('#tiers').hidden=true;$('#pTier').textContent='تصنيفه عندك: '+TIER[b.dataset.t][0];renderContacts();render();toast('أُضيف '+cur+' كـ '+TIER[b.dataset.t][0])});
+
+/* ---- chat ---- */
+function renderContacts(){const b=$('#contacts');b.replaceChildren();
+const w=h('button','ct'),wa=h('span','av rb','م');wa.style.setProperty('--c','#F59E0B');const ww=h('span'),wn=h('strong',null,'مؤسس شغف'),wb=badge('مؤسس شغف');if(wb)wn.append(wb);ww.append(wn,h('div','mut',st.get('sg_wread',false)?'رسالة ترحيب':'رسالة جديدة: مرحبًا بك في شغف'));w.append(wa,ww);w.onclick=()=>{st.set('sg_wread',true);$('#wTitle').textContent='رسالة من مؤسس شغف';$('#wTxt').textContent=WELCOME;openM('wModal');renderContacts()};b.append(w);
+[...DEMO].filter(d=>!blocked[d[0]]).sort((a,c)=>(tiers[a[0]]?TIER[tiers[a[0]]][1]:3)-(tiers[c[0]]?TIER[tiers[c[0]]][1]:3)).forEach(([n,bio])=>{const t=tiers[n],x=h('button','ct'),a=h('span','av rb',n[0]);if(t)a.style.setProperty('--c',TIER[t][2]);const k=h('span'),nm=h('strong',null,n),bd=badge(n);if(bd)nm.append(bd);k.append(nm,h('div','mut',t?TIER[t][0]:bio));x.append(a,k);if(unread[n])x.append(h('span','pr',String(unread[n])));x.onclick=()=>openDm(n);b.append(x)})}
+/* group chat handler is in the rooms block */
+
+/* ---- assistant ---- */
+$('#bform').onsubmit=e=>{e.preventDefault();const v=$('#bin').value.trim();if(!v)return;const m=$('#bmsgs');m.append(h('div','bub me',v));const q=v.toLowerCase();let r='أجيب فقط عن تطبيق شغف. إن احتجت مساعدة أخرى اكتب «دعم بشري».';
+if(/دعم|مشرف|support|human|humain|mod/.test(q))r='تم تحويل طلبك إلى مشرف بشري. سيرد عليك قريبًا.';
+else if(/منشور|نشر|post|publi/.test(q))r='اضغط زر + في الأسفل، اختر السيرفر، اكتب منشورك ثم انشر.';
+else if(/صديق|bro|friend|ami/.test(q))r='افتح ملف المستخدم واضغط «إضافة صديق» ثم اختر: عادي، جيد، أو Bro 🔥. المحادثات تُرتّب بحسب التصنيف.';
+else if(/عقوب|حظر|بوت|penalt|ban|sanction/.test(q))r='العقوبات متدرجة: تحذير، ساعة، يوم، أسبوع، ثم أسبوعان فأكثر. لديك 5 فرص ويمكنك الاعتراض على أي عقوبة.';
+else if(/بث|لايف|live|stream|direct/.test(q))r='افتح تبويب البث من الشريط السفلي ثم اضغط «ابدأ البث».';
+else if(/خصوص|قاصر|حساب|privacy|private|minor|account|compte|confid/.test(q))r='من القائمة ☰ يمكنك جعل حسابك عامًا أو خاصًا وتفعيل حماية القاصرين.';
+m.append(h('div','bub bot',r));$('#bin').value='';m.scrollTop=m.scrollHeight};
+
+/* ---- live ---- */
+$('#liveBtn').onclick=()=>{$('#liveSt').textContent='واجهة تجريبية: البث الحقيقي يحتاج ربط خدمة مثل Agora أو LiveKit.';toast('بدأ البث التجريبي')};
+
+/* ---- settings ---- */
+$('#sSave').onclick=()=>{opts={priv:$('#priv').value,minor:$('#minor').value};st.set('sg_opts',opts);closeM('sModal');toast('تم حفظ الإعدادات')};
+$('#outBtn').onclick=()=>{st.set('sg_user',null);location.reload()};
+let dc=0;$('#delBtn').onclick=function(){if(!dc){dc=1;this.textContent='اضغط مرة ثانية للتأكيد';setTimeout(()=>{dc=0;this.textContent='حذف الحساب نهائيًا'},4000);return}st.clear();location.reload()};
+
+/* ---- comments, report/block, DMs, rooms, stories, notifications ---- */
+const savePosts=()=>st.set('sg_posts',posts);
+function share(p){const t=p.u+': '+p.t+' - Shaghaf';if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>toast('تم نسخ المنشور'));else toast('المشاركة غير مدعومة')}
+let blocked=st.get('sg_blk',{}),muted=st.get('sg_mute',{}),reports=st.get('sg_rep',{}),ut='';
+function uUI(){$('#uT').textContent=ut;$('#uMuteT').textContent=muted[ut]?'إلغاء الكتم':'كتم الإشعارات';$('#uBlkT').textContent=blocked[ut]?'إلغاء حظر المستخدم':'حظر هذا المستخدم'}
+function openUser(n){ut=n;uUI();openM('uModal')}
+$('#uRep').onclick=()=>{reports[ut]=(reports[ut]||0)+1;st.set('sg_rep',reports);closeM('uModal');toast('تم إرسال البلاغ للمشرفين')};
+$('#uMute').onclick=()=>{if(muted[ut])delete muted[ut];else muted[ut]=1;st.set('sg_mute',muted);uUI()};
+$('#uBlk').onclick=()=>{if(blocked[ut])delete blocked[ut];else blocked[ut]=1;st.set('sg_blk',blocked);uUI();render();renderContacts();renderStories();renderRoom()};
+$('#moreB').onclick=()=>openUser(cur);
+let notifs=st.get('sg_notif',[]),dnd=st.get('sg_dnd','0'),dms=st.get('sg_dm',{}),unread={},dmu='';
+const nDot=()=>{$('#nDot').hidden=dnd=='1'||!notifs.some(n=>!n.r)},dot=()=>{$('#cDot').hidden=!Object.values(unread).some(x=>x>0)};
+function notify(t,from){if(from&&muted[from])return;notifs.unshift({t,ts:Date.now(),r:0});notifs=notifs.slice(0,30);st.set('sg_notif',notifs);if(dnd!='1')toast(t);nDot()}
+$('#notifBtn').onclick=()=>{const b=$('#nList');b.replaceChildren();if(!notifs.length)b.append(h('div','empty','لا إشعارات'));notifs.forEach(n=>{const d=h('div','cvr');d.append(h('span',null,n.t),h('span','mut',new Date(n.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));b.append(d)});notifs.forEach(n=>n.r=1);st.set('sg_notif',notifs);nDot();openM('nModal')};
+$('#dnd').value=dnd;$('#dnd').onchange=e=>{dnd=e.target.value;st.set('sg_dnd',dnd);nDot()};
+function openDm(n){if(blocked[n]){toast('هذا الحساب محظور عندك');return}if(st.get('sg_minor',false)&&!tiers[n]){toast('حماية القاصرين: الرسائل للأصدقاء فقط');return}dmu=n;unread[n]=0;$('#dmName').textContent=n;rDm();renderContacts();dot();show('dm')}
+function rDm(){const b=$('#dmMsgs'),L=dms[dmu]||[];b.replaceChildren();if(!L.length)b.append(h('div','empty','ابدأ المحادثة'));L.forEach(m=>b.append(h('div','bub'+(m.me?' me':''),m.t)));b.scrollTop=b.scrollHeight}
+$('#dmForm').onsubmit=e=>{e.preventDefault();const v=$('#dmIn').value.trim();if(!v||!check(v))return;(dms[dmu]=dms[dmu]||[]).push({me:1,t:v});$('#dmIn').value='';st.set('sg_dm',dms);rDm();addXp(2);const n=dmu;setTimeout(()=>{(dms[n]=dms[n]||[]).push({t:'أهلًا! سأرد عليك قريبًا.'});st.set('sg_dm',dms);if(dmu==n&&$('#dm').classList.contains('on'))rDm();else{unread[n]=(unread[n]||0)+1;renderContacts();dot()}notify('رسالة جديدة من '+n,n)},1500)};
+$('#dmBack').onclick=()=>show('chat');$('#dmMore').onclick=()=>openUser(dmu);$('#dmName').onclick=()=>openProfile(dmu);
+let rooms=st.get('sg_rooms',['عام','Free Fire','PUBG Mobile','Editors','Dev & Design'].map(n=>({n,o:'مؤسس شغف',m:[]}))),msgs=st.get('sg_msgs',{'عام':[{u:'مؤسس شغف',t:'أهلًا بالجميع في شغف. التزم بالأدب ليبقى المجتمع نظيفًا.'}]}),room='عام';
+const saveMsgs=()=>{st.set('sg_msgs',msgs);st.set('sg_rooms',rooms)};
+function rb(){const b=$('#roomBar');b.replaceChildren();rooms.forEach(r=>{const x=h('button','chip'+(r.n==room?' on':''),r.n);x.onclick=()=>{room=r.n;renderRoom()};b.append(x)});const a=h('button','chip','+');a.setAttribute('aria-label','روم جديد');a.onclick=()=>openF('room');b.append(a)}
+function renderRoom(){const r=rooms.find(x=>x.n==room)||rooms[0],b=$('#gmsgs'),can=owner()||r.o==me||(r.m||[]).includes(me),L=msgs[r.n]||[];$('#roomName').textContent=r.n;rb();b.replaceChildren();if(!L.length)b.append(h('div','empty','لا رسائل بعد. ابدأ النقاش.'));
+L.forEach((m,i)=>{if(blocked[m.u])return;const d=h('div','bub'+(m.u==me?' me':'')),hd=h('div','mut'),ro=r.o==m.u?'مالك':(r.m||[]).includes(m.u)?'مشرف':'',bd=badge(m.u);hd.append(h('strong',null,m.u));if(bd)hd.append(bd);if(ro)hd.append(h('span','pinl',' · '+ro));d.append(hd,document.createTextNode(m.t));if(can&&m.u!=me){const x=h('button','xx','✕');x.setAttribute('aria-label','حذف');x.onclick=()=>{if(CL.delMsg&&m.id)CL.delMsg(m);else{L.splice(i,1);saveMsgs();renderRoom()}};d.append(x)}b.append(d)});b.scrollTop=b.scrollHeight}
+$('#gform').onsubmit=e=>{e.preventDefault();const v=$('#gin').value.trim();if(!v)return;const r=rooms.find(x=>x.n==room);
+if(v[0]=='/'){const[c,...a]=v.split(' '),n=a.join(' ').trim();$('#gin').value='';if(!(owner()||r.o==me)){toast('أوامر الروم لمالك الروم فقط');return}if(c=='/mod'&&n){r.m=r.m||[];if(!r.m.includes(n))r.m.push(n);toast('تم تعيين '+n+' مشرفًا')}else if(c=='/unmod'&&n){r.m=(r.m||[]).filter(x=>x!=n);toast('أُزيل '+n+' من الإشراف')}else if(c=='/clear')msgs[room]=[];saveMsgs();renderRoom();return}
+if(!check(v)){$('#gin').value='';return}if(CL.msg)CL.msg(room,v);else{(msgs[room]=msgs[room]||[]).push({u:me,t:v});saveMsgs();renderRoom()}$('#gin').value='';addXp(2)};
+$$('[data-ct]').forEach(b=>b.onclick=()=>{$$('[data-ct]').forEach(x=>x.classList.toggle('on',x==b));$('#pDm').hidden=b.dataset.ct!='dm';$('#pRm').hidden=b.dataset.ct!='rm';if(b.dataset.ct=='rm')renderRoom()});
+let stories=st.get('sg_stories',[]);
+function renderStories(){const b=$('#stories'),live=stories.filter(x=>Date.now()-x.ts<864e5);b.replaceChildren();st.set('sg_stories',live);const a=h('button','si'),r=h('span','ring');r.append(h('i',null,'+'));a.append(r,h('span',null,'أضف ستوري'));a.onclick=()=>openF('story');b.append(a);live.filter(x=>!blocked[x.u]).forEach(x=>{const y=h('button','si on'),q=h('span','ring');q.append(h('i',null,x.u[0]));y.append(q,h('span',null,x.u));y.onclick=()=>{$('#stU').textContent=x.u;$('#stT').textContent=x.t;$('#stBox').style.background=['linear-gradient(135deg,#7C3AED,#3B82F6)','linear-gradient(135deg,#F97316,#EF4444)','linear-gradient(135deg,#10B981,#3B82F6)'][x.u.length%3];openM('stModal');setTimeout(()=>closeM('stModal'),6000)};b.append(y)})}
+$('#tLink').onclick=()=>openM('lModal');$('#lBtn').onclick=()=>openM('lModal');
+
+/* ---- market, team finder, tournaments, CV ---- */
+let services=st.get('sg_serv',[{id:1,u:'سلمى',t:'مونتاج كليب قصير',pr:15,d:'مونتاج احترافي بإيقاع سريع'},{id:2,u:'ياسين',t:'تصميم شعار لقناتك',pr:20,d:'ثلاثة اقتراحات مع تعديلين'}]),orders=st.get('sg_ord',[]),ratings=st.get('sg_rate',{}),lfg=st.get('sg_lfg',[{u:'رامي',g:'Free Fire',rk:'Heroic',tm:'مساءً · MENA'}]),tours=st.get('sg_trn',[{t:'كأس شغف الأسبوعي',g:'Free Fire',dt:'الجمعة',n:[]}]),prof=st.get('sg_prof',{}),xp=st.get('sg_xp',0),hub='srv',os=null,fk='srv';
+const sv2=()=>{['serv:services','ord:orders','rate:ratings','lfg:lfg','trn:tours','prof:prof'].forEach(x=>{const[k,v]=x.split(':');st.set('sg_'+k,{services,orders,ratings,lfg,tours,prof}[v])})};
+const addXp=n=>{xp+=n;st.set('sg_xp',xp)},lvl=x=>Math.floor(Math.sqrt(x/25))+1;
+const rating=u=>{const a=ratings[u];return a&&a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1):''};
+const mine=p=>{const g=((prof[me]||{}).games||'').toLowerCase();return !g||g.split(',').some(x=>x.trim()&&p.s.toLowerCase().includes(x.trim()))};
+function renderHub(){$$('.seg button[data-h]').forEach(b=>b.classList.toggle('on',b.dataset.h==hub));const b=$('#hubBody');b.replaceChildren();
+const add=h('button','sm','+ '+{srv:'خدمة',lfg:'طلب فريق',trn:'بطولة'}[hub]);add.style.margin='0 14px';add.onclick=()=>openF(hub);b.append(add);
+if(hub=='srv'){services.forEach(s=>{const c=h('div','card'),r=h('div','row2'),n=h('strong',null,s.u),bd=badge(s.u),rt=rating(s.u);if(bd)n.append(bd);r.append(n,h('span','pr',s.pr+' $'));c.append(r,h('div',null,s.t),h('div','mut',s.d+(rt?' · ★ '+rt:'')));if(s.u!=me){const o=h('button','sm','اطلب الآن');o.style.marginTop='10px';o.onclick=()=>openOrder(s);c.append(o)}b.append(c)});
+if(orders.length){b.append(h('h4','cvh','طلباتي'));orders.forEach(o=>{const c=h('div','card'),r=h('div','row2'),a=h('button','sm');a.style.marginTop='10px';r.append(h('strong',null,o.t),h('span','pr',o.pr+' $'));c.append(r,h('div','mut',['المبلغ محجوز لدى المنصة','تم التسليم: بانتظار تأكيدك','مكتمل'][o.st]+' · '+o.pay+' · '+o.seller));
+if(o.st==0){a.textContent='محاكاة تسليم البائع (تجريبي)';a.onclick=()=>{o.st=1;sv2();renderHub()};c.append(a)}
+else if(o.st==1){a.textContent='تأكيد الاستلام وتحرير المبلغ';a.onclick=()=>{o.st=2;addXp(30);sv2();renderHub();toast('تم تحرير المبلغ للبائع')};c.append(a)}
+else if(!o.r){const q=h('div','row2');[1,2,3,4,5].forEach(k=>{const x=h('button','sm','★'+k);x.onclick=()=>{o.r=k;(ratings[o.seller]=ratings[o.seller]||[]).push(k);sv2();renderHub()};q.append(x)});c.append(h('div','mut','قيّم البائع:'),q)}else c.append(h('div','pr','★ '+o.r));b.append(c)})}}
+else if(hub=='lfg')lfg.forEach(l=>{const c=h('div','card'),r=h('div','row2');r.append(h('strong',null,l.u),h('span','chip',l.g));c.append(r,h('div','mut','الرتبة: '+l.rk+' · '+l.tm));if(l.u!=me){const j=h('button','sm','انضم للفريق');j.style.marginTop='10px';j.onclick=()=>{toast('أُرسل طلب انضمامك إلى '+l.u);addXp(3)};c.append(j)}b.append(c)});
+else tours.forEach(t=>{const c=h('div','card'),r=h('div','row2'),j=t.n.includes(me),x=h('button','sm',j?'إلغاء التسجيل':'سجّل');x.style.marginTop='10px';r.append(h('strong',null,t.t),h('span','chip',t.g));c.append(r,h('div','mut',t.dt+' · '+t.n.length+' مشارك'));x.onclick=()=>{if(j)t.n=t.n.filter(v=>v!=me);else{t.n.push(me);addXp(5)}sv2();renderHub()};c.append(x);b.append(c)})}
+$$('.seg button[data-h]').forEach(b=>b.onclick=()=>{hub=b.dataset.h;renderHub()});$('#toLive').onclick=()=>show('live');
+const FC={srv:['خدمة جديدة','عنوان الخدمة','السعر (رقم)','وصف مختصر'],lfg:['طلب فريق','اللعبة','الرتبة','الوقت والمنطقة'],trn:['بطولة جديدة','اسم البطولة','اللعبة','التاريخ'],story:['ستوري جديدة','نص الستوري'],room:['روم جديد','اسم الروم']};
+function openF(k){fk=k;const c=FC[k];$('#fT').textContent=c[0];['f1','f2','f3'].forEach((id,i)=>{const e=$('#'+id);e.__o=null;e.value='';e.setAttribute('placeholder',c[i+1]||'');e.hidden=!c[i+1]});ap($('#fModal'));openM('fModal')}
+$('#fGo').onclick=()=>{const a=$('#f1').value.trim(),b=$('#f2').value.trim(),c=$('#f3').value.trim(),one=fk=='story'||fk=='room';if(!a||(!one&&!b))return;if(!check([a,b,c].join(' ')))return;if(fk=='story'){stories.unshift({u:me,t:a,ts:Date.now()});addXp(5);renderStories();closeM('fModal');return}if(fk=='room'){if(rooms.some(x=>x.n==a)){toast('اسم الروم مستخدم');return}rooms.push({n:a,o:me,m:[]});room=a;saveMsgs();closeM('fModal');renderRoom();return}if(fk=='srv')services.unshift({id:Date.now(),u:me,t:a,pr:Math.max(1,parseFloat(b)||1),d:c});else if(fk=='lfg')lfg.unshift({u:me,g:a,rk:b,tm:c});else tours.unshift({t:a,g:b,dt:c,n:[]});addXp(15);sv2();closeM('fModal');renderHub()};
+function openOrder(s){if(st.get('sg_minor',false)){toast('الشراء من السوق للأعمار 18+ فقط');return}os=s;$('#rT').textContent=s.t+' · '+s.pr+' $';openM('rModal')}
+$('#rGo').onclick=()=>{orders.unshift({t:os.t,pr:os.pr,seller:os.u,pay:$('#pay').value,st:0});sv2();closeM('rModal');renderHub();toast('تم حجز المبلغ لدى المنصة حتى التسليم')};
+function cv(n){const b=$('#pCv');b.replaceChildren();const p=prof[n]||{},rt=rating(n),row=(l,v)=>{if(!v)return;const d=h('div','cvr');d.append(h('span','mut',l),h('strong',null,v));b.append(d)};
+if(n==me){row('المستوى','Lv.'+lvl(xp)+' · '+xp+' XP');const mp=posts.filter(p=>p.u==me),L=mp.reduce((a,p)=>a+p.l,0),C=mp.reduce((a,p)=>a+(p.c||[]).length,0),V=mp.reduce((a,p)=>a+(p.v||0),0);b.append(h('h4','cvh','إحصائياتك (تقديرية تجريبية)'));row('المشاهدات',String(V));row('الإعجابات',String(L));row('التعليقات',String(C));row('المنشورات',String(mp.length));row('الأصدقاء',String(Object.keys(tiers).length))}row('التقييم',rt?rt+' / 5':'');row('ID اللعبة',p.gid);row('الرتبة',p.rank);row('ألعابه',p.games);
+if(p.skills){const c=h('div','chips2');p.skills.split(',').forEach(x=>{if(x.trim())c.append(h('span','chip',x.trim()))});b.append(c)}
+const w=services.filter(x=>x.u==n);if(w.length){b.append(h('h4','cvh','معرض الأعمال'));w.forEach(x=>b.append(h('div','cvr',x.t+' — '+x.pr+' $')))}
+if(!b.children.length)b.append(h('div','empty','لا توجد أعمال معروضة بعد.'))}
+$('#editP').onclick=()=>{const p=prof[me]||{};['bio','skills','gid','rank','games'].forEach((k,i)=>$('#e'+(i+1)).value=p[k]||'');openM('eModal')};
+$('#eGo').onclick=()=>{const v=[1,2,3,4,5].map(i=>$('#e'+i).value.trim());if(!check(v.join(' ')))return;prof[me]={bio:v[0],skills:v[1],gid:v[2],rank:v[3],games:v[4]};sv2();closeM('eModal');openProfile(me,'حسابك الشخصي');toast('تم حفظ الملف')};
+const lite=v=>document.documentElement.classList.toggle('lite',v=='1'),lv=st.get('sg_lite',(navigator.connection&&navigator.connection.saveData)?'1':'0');lite(lv);$('#lite').value=lv;$('#lite').onchange=e=>{st.set('sg_lite',e.target.value);lite(e.target.value)};
+
+/* ---- owner tools ---- */
+let tgt='',banned=st.get('sg_ban',{}),warns=st.get('sg_warn',{});
+function toolsUI(){const n=tgt;$('#aTitle').textContent='أدوات المالك: '+n+(reports[n]?' ('+reports[n]+' بلاغ)':'');$('#aBadgeT').textContent=badges[n]?'سحب شارة التوثيق':'منح شارة التوثيق';$('#aBanT').textContent=banned[n]?'فك الحظر':'حظر الحساب';$('#aWbox').hidden=true}
+function openTools(n){tgt=n;toolsUI();openM('aModal')}
+$('#aBadge').onclick=()=>grant(tgt);
+$('#aWarn').onclick=()=>{$('#aWbox').hidden=!$('#aWbox').hidden};
+$('#aSend').onclick=()=>{const t=$('#aTxt').value.trim();if(!t){toast('اكتب نص التنبيه');return}(warns[tgt]=warns[tgt]||[]).push(t);st.set('sg_warn',warns);$('#aTxt').value='';$('#aWbox').hidden=true;toast('تم إرسال التنبيه إلى '+tgt)};
+$('#aBan').onclick=()=>{if(banned[tgt]){delete banned[tgt];toast('تم فك الحظر عن '+tgt)}else{banned[tgt]=1;toast('تم حظر '+tgt)}st.set('sg_ban',banned);toolsUI();render()};
+function inbox(){if(banned[me]){toast('حسابك محظور من الإدارة');return}const w=warns[me];if(w&&w.length){$('#wTitle').textContent='تنبيه من الإدارة';const t=$('#wTxt');t.style.whiteSpace='pre-line';t.textContent=w.join('\n');warns[me]=[];st.set('sg_warn',warns);openM('wModal')}}
+
+/* ---- verification & owner ---- */
+$('#vBtn').onclick=()=>openM('vModal');
+$('#vGo').onclick=()=>{if(badges[me]!='own')badges[me]='sub';sv();closeM('vModal');closeM('sModal');render();toast('تم تفعيل علامة التوثيق (تجريبي)')};
+$('#oBtn').onclick=()=>{$('#oHint').textContent=st.get('sg_ohash',null)?'أدخل رمز المالك الذي أنشأته.':'أنشئ رمز مالك (6 أحرف فأكثر) واحفظه، سيُطلب منك لاحقًا.';openM('oModal')};
+$('#oGo').onclick=async()=>{const c=$('#oCode').value;if(c.length<6){toast('الرمز 6 أحرف على الأقل');return}try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(c)),x=[...new Uint8Array(b)].map(v=>v.toString(16).padStart(2,'0')).join(''),old=st.get('sg_ohash',null);if(old&&old!=x){toast('الرمز غير صحيح');return}st.set('sg_ohash',x);st.set('sg_owner',me);badges[me]='own';boosted[me]=1;sv();$('#oCode').value='';closeM('oModal');closeM('sModal');render();toast('تم تفعيل وضع المالك')}catch(e){toast('المتصفح لا يدعم التحقق هنا')}};
+$('#admB').onclick=()=>openTools(cur);
+
+/* ---- languages ---- */
+const R=[
+[`الوضع للمالك فقط`,`Owner only`],[`هذا الاسم مستخدم`,`This name is taken`],[`تعذّر حفظ الاسم`,`Could not save the name`],[`تعذّر الدخول: `,`Login failed: `],[`أُغلقت نافذة الدخول`,`Login window closed`],
+[`Facebook غير مفعل بعد، استخدم Google`,`Facebook is not enabled yet, use Google`],[`تعذّر النشر`,`Could not post`],[`تعذّر الإرسال`,`Could not send`],[`اكتب اسمًا مستعارًا صحيحًا (3-16 حرفًا بلا رموز)`,`Enter a valid nickname (3-16 characters, no symbols)`],[`خطأ في السحابة: `,`Cloud error: `],
+[`أضف ستوري`,`Add story`],[`ستوري جديدة`,`New story`],[`نص الستوري`,`Story text`],[`الأصدقاء`,`Friends`],[`الرومات`,`Rooms`],[`لا رسائل بعد. ابدأ النقاش.`,`No messages yet. Start the discussion.`],[` · مالك`,` · Owner`],[` · مشرف`,` · Mod`],
+[`روم جديد`,`New room`],[`اسم الروم`,`Room name`],[`اسم الروم مستخدم`,`Room name already used`],[`أوامر الروم لمالك الروم فقط`,`Room commands are for the room owner only`],[`تم تعيين `,`Appointed `],[` مشرفًا`,` as moderator`],[`أُزيل `,`Removed `],[` من الإشراف`,` from moderation`],
+[`ابدأ المحادثة`,`Start the conversation`],[`هذا الحساب محظور عندك`,`You blocked this account`],[`حماية القاصرين: الرسائل للأصدقاء فقط`,`Minor protection: messages are for friends only`],[`أهلًا! سأرد عليك قريبًا.`,`Hi! I will reply soon.`],
+[`رسالة جديدة من `,`New message from `],[`علّقت على منشورك`,`commented on your post`],[`اكتب تعليقًا`,`Write a comment`],[`تعليقات`,`Comments`],[`مشاركة`,`Share`],[`خيارات`,`Options`],[`رجوع`,`Back`],[`حذف`,`Delete`],
+[`تم نسخ المنشور`,`Post copied`],[`المشاركة غير مدعومة`,`Sharing not supported`],[`إبلاغ عن الحساب`,`Report account`],[`كتم الإشعارات`,`Mute notifications`],[`إلغاء الكتم`,`Unmute`],[`حظر هذا المستخدم`,`Block this user`],[`إلغاء حظر المستخدم`,`Unblock user`],
+[`تم إرسال البلاغ للمشرفين`,`Report sent to moderators`],[`خيارات الحساب`,`Account options`],[`الإشعارات`,`Notifications`],[`لا إشعارات`,`No notifications`],[`وضع عدم الإزعاج`,`Do not disturb`],[` بلاغ)`,` reports)`],
+[`إحصائياتك (تقديرية تجريبية)`,`Your stats (demo estimates)`],[`المشاهدات`,`Views`],[`الإعجابات`,`Likes`],[`التعليقات`,`Comments`],[`المنشورات`,`Posts`],
+[`الشروط والخصوصية`,`Terms and privacy`],[`الشروط وسياسة الخصوصية`,`Terms and privacy policy`],
+[`• نجمع الاسم المستعار والمنشورات والرسائل لتشغيل الخدمة فقط.`,`• We collect your nickname, posts and messages only to run the service.`],[`• لا نبيع بياناتك لأي طرف.`,`• We never sell your data.`],
+[`• يُمنع الإساءة والتنمر والمحتوى الجنسي والعنيف والاحتيال.`,`• Abuse, bullying, sexual or violent content and fraud are banned.`],[`• المخالفة تُعاقَب بتحذير ثم كتم مؤقت متدرج، ولك حق الاعتراض.`,`• Violations get a warning then escalating mutes. You can appeal.`],
+[`• لمن دون 18 سنة حماية إضافية، ولا يشترون من السوق.`,`• Under-18 users get extra protection and cannot buy from the market.`],[`• يمكنك حذف حسابك وبياناتك في أي وقت من الإعدادات.`,`• You can delete your account and data anytime in Settings.`],
+[`هذا نموذج أولي. راجعه مع مختص قانوني قبل النشر في المتاجر.`,`This is a draft. Have a lawyer review it before store release.`],
+[`خدمات`,`Services`],[`فريق`,`Team`],[`بطولات`,`Tournaments`],[`بث`,`Live`],[`السوق`,`Market`],[`+ خدمة`,`+ Service`],[`+ طلب فريق`,`+ Team request`],[`+ بطولة`,`+ Tournament`],
+[`اطلب الآن`,`Order now`],[`انضم للفريق`,`Join team`],[`طلباتي`,`My orders`],[`المبلغ محجوز لدى المنصة`,`Funds held in escrow`],[`تم التسليم: بانتظار تأكيدك`,`Delivered: awaiting your confirmation`],[`مكتمل`,`Completed`],
+[`محاكاة تسليم البائع (تجريبي)`,`Simulate seller delivery (demo)`],[`تأكيد الاستلام وتحرير المبلغ`,`Confirm receipt and release funds`],[`قيّم البائع:`,`Rate the seller:`],[`تم تحرير المبلغ للبائع`,`Funds released to the seller`],
+[`الرتبة: `,`Rank: `],[`أُرسل طلب انضمامك إلى `,`Join request sent to `],[`معرض الأعمال`,`Portfolio`],[`التقييم`,`Rating`],[`المستوى`,`Level`],[`ID اللعبة`,`Game ID`],[`الرتبة`,`Rank`],[`ألعابه`,`Games`],
+[`تعديل الملف`,`Edit profile`],[`عنوان الخدمة`,`Service title`],[`السعر (رقم)`,`Price (number)`],[`وصف مختصر`,`Short description`],[`اللعبة`,`Game`],[`الوقت والمنطقة`,`Time and region`],[`اسم البطولة`,`Tournament name`],[`التاريخ`,`Date`],
+[`خدمة جديدة`,`New service`],[`طلب فريق`,`Team request`],[`بطولة جديدة`,`New tournament`],[`طريقة الدفع`,`Payment method`],[`بطاقة بنكية`,`Bank card`],[`الدفع تجريبي: يُحجز المبلغ لدى المنصة حتى تؤكد الاستلام.`,`Demo payment: funds are held by the platform until you confirm receipt.`],
+[`تأكيد وحجز المبلغ`,`Confirm and hold payment`],[`تم حجز المبلغ لدى المنصة حتى التسليم`,`Payment held until delivery`],[`الشراء من السوق للأعمار 18+ فقط`,`Marketplace purchases are 18+ only`],
+[`18 سنة فأكثر`,`18 or older`],[`أقل من 18 سنة`,`Under 18`],[`العمر`,`Age`],[`الوضع الخفيف (للأجهزة الضعيفة)`,`Lite mode (for low-end devices)`],[`مفعلة`,`On`],
+[`نبذة عنك`,`About you`],[`مهارات مفصولة بفاصلة`,`Skills, comma-separated`],[`الألعاب المفضلة (مفصولة بفاصلة)`,`Favorite games (comma-separated)`],[`تم حفظ الملف`,`Profile saved`],
+[`إلغاء التسجيل`,`Unregister`],[`سجّل`,`Register`],[` مشارك`,` participants`],
+[`أدوات المالك`,`Owner tools`,`Outils propriétaire`],[`منح شارة التوثيق`,`Give verified badge`,`Donner le badge vérifié`],[`سحب شارة التوثيق`,`Remove verified badge`,`Retirer le badge vérifié`],
+[`إرسال تنبيه`,`Send a warning`,`Envoyer un avertissement`],[`نص التنبيه`,`Warning text`,`Texte de l'avertissement`],[`إرسال التنبيه`,`Send warning`,`Envoyer`],
+[`حظر الحساب`,`Ban account`,`Bannir le compte`],[`فك الحظر`,`Unban account`,`Débannir le compte`],[`تنبيه من الإدارة`,`Notice from the admin`,`Avis de l'administration`],
+[`اكتب نص التنبيه`,`Write the warning text`,`Écrivez le texte`],[`تم إرسال التنبيه إلى `,`Warning sent to `,`Avertissement envoyé à `],[`تم فك الحظر عن `,`Unbanned `,`Débanni : `],[`تم حظر `,`Banned `,`Banni : `],
+[`حسابك محظور من الإدارة`,`Your account is banned by the admin`,`Votre compte est banni par l'administration`],[` · محظور`,` · Banned`,` · Banni`],
+[`شغف`,`Shaghaf`,`Shaghaf`],[`القائمة`,`Menu`,`Menu`],[`مساعد شغف`,`Shaghaf Assistant`,`Assistant Shaghaf`],
+[`ابحث في المنشورات والمهارات`,`Search posts and skills`,`Rechercher posts et compétences`],[`إضافة ستوري`,`Add story`,`Ajouter une story`],[`بحث`,`Search`,`Recherche`],
+[`الروم العام`,`Public room`,`Salon public`],[`أهلًا بالجميع في شغف. التزم بالأدب ليبقى المجتمع نظيفًا.`,`Welcome to Shaghaf. Stay respectful to keep the community clean.`,`Bienvenue sur Shaghaf. Restez respectueux pour une communauté saine.`],
+[`اكتب رسالة`,`Write a message`,`Écrire un message`],[`رسالة`,`Message`,`Message`],[`إرسال`,`Send`,`Envoyer`],
+[`أجيب فقط عن تطبيق شغف. اكتب «دعم بشري» لمحادثة مشرف.`,`I only answer about Shaghaf. Type "human support" to reach a moderator.`,`Je réponds seulement sur Shaghaf. Écrivez « support humain » pour un modérateur.`],
+[`مرحبًا، اسألني عن النشر أو الأصدقاء أو السيرفرات أو الخصوصية.`,`Hi! Ask me about posting, friends, servers or privacy.`,`Salut ! Demandez-moi : publier, amis, serveurs, confidentialité.`],
+[`اسأل المساعد`,`Ask the assistant`,`Demander à l'assistant`],[`سؤال`,`Question`,`Question`],
+[`البث المباشر`,`Live stream`,`Direct`],[`شارك لحظات اللعب والمونتاج مع متابعيك`,`Share gameplay and edits with your followers`,`Partagez vos parties et montages`],[`ابدأ البث`,`Start streaming`,`Lancer le direct`],
+[`لا يوجد بث نشط. اضغط «ابدأ البث» لتجربة الواجهة.`,`No active stream. Tap "Start streaming" to try the demo.`,`Aucun direct. Appuyez sur « Lancer le direct » pour tester.`],
+[`واجهة تجريبية: البث الحقيقي يحتاج ربط خدمة مثل Agora أو LiveKit.`,`Demo only: real streaming needs a service like Agora or LiveKit.`,`Démo : le vrai direct nécessite un service comme Agora ou LiveKit.`],[`بدأ البث التجريبي`,`Demo stream started`,`Direct de démo lancé`],
+[`إضافة صديق`,`Add friend`,`Ajouter en ami`],[`صديق عادي`,`Friend`,`Ami`],[`صديق جيد`,`Good friend`,`Bon ami`],[`لا توجد أعمال معروضة بعد.`,`No work shown yet.`,`Aucune réalisation pour l'instant.`],
+[`الرئيسية`,`Home`,`Accueil`],[`الرسائل`,`Messages`,`Messages`],[`منشور جديد`,`New post`,`Nouveau post`],[`البث`,`Live`,`Direct`],[`حسابي`,`My account`,`Mon compte`],
+[`مجتمع اللاعبين وصنّاع المحتوى. تبادل المهارات وابدأ اللعب.`,`The community for gamers and creators. Swap skills and start playing.`,`La communauté des joueurs et créateurs. Échangez vos compétences.`],
+[`سيرفرات متخصصة`,`Dedicated servers`,`Serveurs dédiés`],[`بث مباشر`,`Live streams`,`Directs`],[`أصدقاء Bro`,`Bro friends`,`Amis Bro`],
+[`المتابعة عبر Google`,`Continue with Google`,`Continuer avec Google`],[`المتابعة عبر Facebook`,`Continue with Facebook`,`Continuer avec Facebook`],[`أو`,`or`,`ou`],
+[`اسمك المستعار (Gamer Tag)`,`Your gamer tag`,`Votre pseudo`],[`الاسم المستعار`,`Nickname`,`Pseudo`],[`ابدأ الآن`,`Get started`,`Commencer`],
+[`بالمتابعة توافق على شروط الاستخدام وسياسة الخصوصية.`,`By continuing you accept the Terms and Privacy Policy.`,`En continuant, vous acceptez les conditions et la politique de confidentialité.`],
+[`تنبيه من المشرف الآلي`,`Auto-mod alert`,`Alerte de l'auto-modération`],[`الفلاتر الآلية قد تخطئ، ويمكنك طلب مراجعة بشرية.`,`Automatic filters can be wrong. You can request a human review.`,`Les filtres peuvent se tromper. Vous pouvez demander une révision humaine.`],
+[`اعتراض على العقوبة`,`Appeal penalty`,`Contester la sanction`],[`فهمت`,`Got it`,`Compris`],[`السيرفر`,`Server`,`Serveur`],[`النص`,`Text`,`Texte`],
+[`اكتب طلبك أو خدمتك`,`Write your request or service`,`Écrivez votre demande ou service`],[`انشر`,`Post`,`Publier`],[`إلغاء`,`Cancel`,`Annuler`],
+[`الإعدادات`,`Settings`,`Paramètres`],[`اللغة`,`Language`,`Langue`],[`خصوصية الحساب`,`Account privacy`,`Confidentialité du compte`],[`عام`,`Public`,`Public`],[`خاص`,`Private`,`Privé`],
+[`حماية القاصرين (أقل من 18)`,`Minor protection (under 18)`,`Protection des mineurs (-18)`],[`مفعلة: حظر رسائل الغرباء`,`On: block messages from strangers`,`Activée : bloque les inconnus`],[`غير مفعلة`,`Off`,`Désactivée`],
+[`علامة التوثيق (اشتراك)`,`Verified badge (subscription)`,`Badge vérifié (abonnement)`],[`علامة التوثيق`,`Verified badge`,`Badge vérifié`],[`وضع المالك`,`Owner mode`,`Mode propriétaire`],
+[`حفظ`,`Save`,`Enregistrer`],[`تسجيل الخروج`,`Log out`,`Se déconnecter`],[`حذف الحساب نهائيًا`,`Delete account permanently`,`Supprimer le compte`],[`إغلاق`,`Close`,`Fermer`],
+[`شارة سداسية بجانب اسمك تدل على حساب موثّق، وتمنح منشوراتك أولوية الظهور في كل السيرفرات.`,`A hexagon badge beside your name marks a verified account and boosts your posts in every server.`,`Un badge hexagonal près de votre nom indique un compte vérifié et met vos posts en avant.`],
+[`الدفع الحقيقي يحتاج ربط بوابة دفع. هذا الزر للتفعيل التجريبي فقط.`,`Real payments need a payment gateway. This button is a demo only.`,`Le paiement réel nécessite une passerelle. Ce bouton est un test.`],
+[`تفعيل تجريبي`,`Demo activation`,`Activation test`],[`رمز المالك`,`Owner code`,`Code propriétaire`],[`تأكيد`,`Confirm`,`Confirmer`],
+[`أنشئ رمز مالك (6 أحرف فأكثر) واحفظه، سيُطلب منك لاحقًا.`,`Create an owner code (6+ characters) and keep it. You will need it later.`,`Créez un code propriétaire (6+ caractères) et gardez-le.`],[`أدخل رمز المالك الذي أنشأته.`,`Enter the owner code you created.`,`Entrez le code propriétaire créé.`],
+[`الرمز 6 أحرف على الأقل`,`Code must be 6+ characters`,`Le code doit avoir 6+ caractères`],[`الرمز غير صحيح`,`Wrong code`,`Code incorrect`],[`تم تفعيل وضع المالك`,`Owner mode enabled`,`Mode propriétaire activé`],
+[`تم تفعيل علامة التوثيق (تجريبي)`,`Verified badge activated (demo)`,`Badge vérifié activé (test)`],[`تم حفظ الإعدادات`,`Settings saved`,`Paramètres enregistrés`],[`اضغط مرة ثانية للتأكيد`,`Tap again to confirm`,`Appuyez encore pour confirmer`],
+[`الستوريات قادمة في التحديث القادم`,`Stories are coming in the next update`,`Les stories arrivent bientôt`],[`وضع تجريبي: الربط الحقيقي مع `,`Demo mode: real login with `,`Mode démo : la vraie connexion avec `],[` يحتاج سيرفر`,` needs a server`,` nécessite un serveur`],
+[`الاسم المستعار 3 أحرف على الأقل`,`Nickname needs 3+ characters`,`Le pseudo doit avoir 3+ caractères`],[`هذا الاسم غير مسموح`,`This name is not allowed`,`Ce nom n'est pas autorisé`],
+[`لا نتائج. جرّب سيرفرًا آخر أو انشر أول منشور.`,`No results. Try another server or post first.`,`Aucun résultat. Essayez un autre serveur ou publiez.`],[`سيرفر: `,`Server: `,`Serveur : `],[` · مميز`,` · Featured`,` · En vedette`],
+[`أُضيف `,`Added `,`Ajouté : `],[` كـ `,` as `,` en tant que `],[`تصنيفه عندك: `,`Your label: `,`Votre étiquette : `],
+[`سحب التوثيق`,`Remove badge`,`Retirer le badge`],[`منح التوثيق ودعم الظهور`,`Grant badge and boost`,`Donner badge et visibilité`],[`منح التوثيق`,`Grant badge`,`Donner le badge`],
+[`مُنح `,`Granted `,`Badge donné à `],[` علامة التوثيق ودعم الظهور`,` the verified badge and boost`,` avec visibilité`],[`سُحبت العلامة من `,`Badge removed from `,`Badge retiré à `],
+[`مؤسس شغف`,`Shaghaf Founder`,`Fondateur Shaghaf`],[`رسالة من مؤسس شغف`,`Message from the Shaghaf founder`,`Message du fondateur Shaghaf`],[`رسالة جديدة: مرحبًا بك في شغف`,`New message: welcome to Shaghaf`,`Nouveau message : bienvenue`],[`رسالة ترحيب`,`Welcome message`,`Message de bienvenue`],
+[`وصلتك رسالة ترحيب من مؤسس شغف`,`You got a welcome message from the founder`,`Message de bienvenue du fondateur`],
+[`أهلًا بك في شغف! هذا مجتمعك للاعبين والمبدعين. انشر مهارتك، انضم إلى سيرفر لعبتك، وأضف أصدقاءك كـ Bro. التزم بالأدب ليبقى المجتمع نظيفًا. استمتع!`,`Welcome to Shaghaf! This is your community for gamers and creators. Post your skills, join your game's server and add friends as Bro. Stay respectful. Enjoy!`,`Bienvenue sur Shaghaf ! Votre communauté de joueurs et créateurs. Publiez vos compétences, rejoignez le serveur de votre jeu et ajoutez des amis Bro. Restez respectueux. Amusez-vous !`],
+[`مصمم تطبيق شغف`,`Shaghaf app designer`,`Concepteur de Shaghaf`],[`عضو في شغف`,`Shaghaf member`,`Membre de Shaghaf`],[`حسابك الشخصي`,`Your profile`,`Votre profil`],
+[`مصمم شعارات`,`Logo designer`,`Designer de logos`],[`محررة مونتاج`,`Video editor`,`Monteuse vidéo`],[`لاعب Free Fire`,`Free Fire player`,`Joueur Free Fire`],[`لاعب ومطور`,`Player and developer`,`Joueur et développeur`],
+[`الفرص: `,`Chances: `,`Chances : `],[`أنت محظور مؤقتًا من الكتابة. المتبقي: `,`You are temporarily muted. Remaining: `,`Vous êtes en sourdine. Restant : `],
+[`رصد المشرف الآلي لفظًا مخالفًا. العقوبة: `,`Auto-mod detected a violation. Penalty: `,`L'auto-modération a détecté une infraction. Sanction : `],[`. الفرص المتبقية: `,`. Chances left: `,`. Chances restantes : `],[` من 5.`,` of 5.`,` sur 5.`],
+[`تحذير فقط`,`warning only`,`avertissement seul`],[` ساعة`,` hour(s)`,` heure(s)`],[` يوم`,` day(s)`,` jour(s)`],[` دقيقة`,` minute(s)`,` minute(s)`],[` أسبوعان`,` 2 weeks`,` 2 semaines`],[` أسبوع`,` week(s)`,` semaine(s)`],[` أسابيع`,` weeks`,` semaines`],
+[`أُرسل اعتراضك لمراجعة المشرفين`,`Your appeal was sent for review`,`Votre contestation a été envoyée`],
+[`أجيب فقط عن تطبيق شغف. إن احتجت مساعدة أخرى اكتب «دعم بشري».`,`I only answer about Shaghaf. Need more help? Type "human support".`,`Je réponds sur Shaghaf. Besoin d'aide ? Écrivez « support humain ».`],
+[`تم تحويل طلبك إلى مشرف بشري. سيرد عليك قريبًا.`,`Your request was sent to a human moderator.`,`Votre demande a été transmise à un modérateur.`],
+[`اضغط زر + في الأسفل، اختر السيرفر، اكتب منشورك ثم انشر.`,`Tap + at the bottom, pick a server, write your post and publish.`,`Appuyez sur + en bas, choisissez un serveur et publiez.`],
+[`افتح ملف المستخدم واضغط «إضافة صديق» ثم اختر: عادي، جيد، أو Bro 🔥. المحادثات تُرتّب بحسب التصنيف.`,`Open a profile, tap "Add friend", then choose Friend, Good friend or Bro 🔥. Chats are sorted by tier.`,`Ouvrez un profil, « Ajouter en ami », puis Ami, Bon ami ou Bro 🔥. Les chats sont triés.`],
+[`العقوبات متدرجة: تحذير، ساعة، يوم، أسبوع، ثم أسبوعان فأكثر. لديك 5 فرص ويمكنك الاعتراض على أي عقوبة.`,`Penalties escalate: warning, 1 hour, 1 day, 1 week, then 2+ weeks. You have 5 chances and can appeal any penalty.`,`Sanctions progressives : avertissement, 1 h, 1 jour, 1 semaine, puis 2+ semaines. 5 chances et contestation possible.`],
+[`افتح تبويب البث من الشريط السفلي ثم اضغط «ابدأ البث».`,`Open the Live tab at the bottom and tap "Start streaming".`,`Ouvrez l'onglet Direct en bas puis « Lancer le direct ».`],
+[`من القائمة ☰ يمكنك جعل حسابك عامًا أو خاصًا وتفعيل حماية القاصرين.`,`From the ☰ menu you can make your account public or private and enable minor protection.`,`Depuis le menu ☰, rendez votre compte public ou privé et activez la protection des mineurs.`]
+];
+const D={};R.forEach(r=>D[r[0]]=[r[1],r[2]]);const KS=Object.keys(D).sort((a,b)=>b.length-a.length);
+let lang=st.get('sg_lang',null)||(['en','fr'].includes((navigator.language||'').slice(0,2))?navigator.language.slice(0,2):'ar');
+function trans(s){if(lang=='ar')return s;const i=lang=='en'?0:1,t=s.trim();if(D[t])return s.replace(t,D[t][i]||D[t][0]);let r=s;for(const k of KS)if(k.length>3&&r.includes(k))r=r.split(k).join(D[k][i]||D[k][0]);return r}
+const O=new WeakMap(),AR=/[\u0600-\u06FF]/;
+function ap(n){if(n.nodeType==3){let o=O.get(n);if(o==null){if(!AR.test(n.data))return;o=n.data;O.set(n,o)}const t=trans(o);if(n.data!==t)n.data=t}else if(n.nodeType==1&&n.tagName!='SCRIPT'&&n.tagName!='STYLE'){['placeholder','aria-label'].forEach(a=>{const v=n.getAttribute(a);if(v==null)return;n.__o=n.__o||{};if(!(a in n.__o)){if(!AR.test(v))return;n.__o[a]=v}n.setAttribute(a,trans(n.__o[a]))});n.childNodes.forEach(ap)}}
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(ap))).observe(document.body,{childList:true,subtree:true});
+function setLang(l){lang=l;st.set('sg_lang',l);const d=document.documentElement;d.lang=l;d.dir=l=='ar'?'rtl':'ltr';document.title=l=='ar'?'شغف | Shaghaf':'Shaghaf';$('#lang').value=l;$$('.lg button').forEach(b=>b.classList.toggle('on',b.dataset.l==l));ap(document.body);renderServers();render();renderContacts();upStat()}
+$$('.lg button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));$('#lang').onchange=e=>setLang(e.target.value);
+
+/* ---- init ---- */
+SV.slice(1).filter(x=>x[0]!='__you').forEach(([v])=>{const o=h('option',null,v);o.value=v;$('#pSrv').append(o)});
+renderServers();
+if(me)enter(me);
+setLang(lang);
+</script>
+<script src="config.js"></script>
+<script type="module">
+const CFG=(window.SG&&window.SG.cfg)||{},OWNER_EMAIL=(window.SG&&window.SG.owner)||"";
+if(CFG.apiKey){try{
+const V='https://www.gstatic.com/firebasejs/10.14.1/';
+const [A,Au,F]=await Promise.all([import(V+'firebase-app.js'),import(V+'firebase-auth.js'),import(V+'firebase-firestore.js')]);
+const app=A.initializeApp(CFG),auth=Au.getAuth(app),db=F.getFirestore(app);
+const {doc,getDoc,setDoc,addDoc,deleteDoc,updateDoc,collection,query,orderBy,limit,onSnapshot,arrayUnion,arrayRemove,serverTimestamp,runTransaction}=F;
+let uid=null,my='',isOwner=false,unsub=[],cw=[];
+const nm=n=>n.toLowerCase(),err=e=>toast('خطأ في السحابة: '+(e.code||''));
+owner=()=>isOwner;
+
+async function boot(u,nick){
+ uid=u.uid;const us=await getDoc(doc(db,'users',uid));let name;
+ if(us.exists())name=us.data().name;
+ else{
+  if(!/^[\p{L}\p{N}_ -]{3,16}$/u.test(nick)||hasBad(nick)||nick=='مؤسس شغف'){toast('اكتب اسمًا مستعارًا صحيحًا (3-16 حرفًا بلا رموز)');await Au.signOut(auth);uid=null;return}
+  try{await runTransaction(db,async t=>{const r=doc(db,'names',nm(nick));if((await t.get(r)).exists())throw new Error('taken');t.set(r,{uid});t.set(doc(db,'users',uid),{name:nick})});name=nick}
+  catch(e){toast(e.message=='taken'?'هذا الاسم مستخدم':'تعذّر حفظ الاسم');await Au.signOut(auth);uid=null;return}
+ }
+ my=name;isOwner=!!OWNER_EMAIL&&u.email==OWNER_EMAIL&&u.emailVerified;
+ if(isOwner)await setDoc(doc(db,'flags',nm(name)),{u:name,badge:'own',boost:true},{merge:true});
+ listen();enter(name);
+}
+function listen(){
+ unsub.forEach(f=>f());unsub=[];
+ unsub.push(onSnapshot(collection(db,'flags'),s=>{const b={'مؤسس شغف':'own'},bo={},bn={};s.forEach(d=>{const x=d.data();if(x.badge)b[x.u]=x.badge;if(x.boost)bo[x.u]=1;if(x.ban)bn[x.u]=1});badges=b;boosted=bo;banned=bn;render();renderContacts();renderRoom();if($('#aModal').classList.contains('on'))toolsUI();if(banned[my])toast('حسابك محظور من الإدارة')},err));
+ unsub.push(onSnapshot(query(collection(db,'posts'),orderBy('ts','desc'),limit(60)),s=>{const op=new Map(posts.map(p=>[p.id,p.o]));posts=s.docs.map(d=>{const x=d.data(),lk=x.lk||[];return{id:d.id,u:x.u,s:x.s,t:x.t,c:x.c||[],l:lk.length,k:lk.includes(uid),o:op.get(d.id)}});render()},err));
+ unsub.push(onSnapshot(query(collection(db,'msgs'),orderBy('ts','desc'),limit(300)),s=>{const m={};s.docs.reverse().forEach(d=>{const x={id:d.id,...d.data()};(m[x.room]=m[x.room]||[]).push(x)});msgs=m;renderRoom()},err));
+ unsub.push(onSnapshot(doc(db,'warns',nm(my)),s=>{cw=(s.data()||{}).list||[];showWarn()}));
+ if(isOwner)unsub.push(onSnapshot(collection(db,'reports'),s=>{const r={};s.forEach(d=>{const t=d.data().to;r[t]=(r[t]||0)+1});reports=r}));
+}
+function showWarn(){if(!cw.length||!my)return;$('#wTitle').textContent='تنبيه من الإدارة';const t=$('#wTxt');t.style.whiteSpace='pre-line';t.textContent=cw.join('\n');openM('wModal');deleteDoc(doc(db,'warns',nm(my))).catch(()=>{})}
+window.inbox=()=>{if(banned[me])toast('حسابك محظور من الإدارة')};
+
+async function login(google){
+ const nick=$('#nick').value.trim();
+ try{const c=google?await Au.signInWithPopup(auth,new Au.GoogleAuthProvider()):await Au.signInAnonymously(auth);await boot(c.user,nick)}
+ catch(e){toast(e.code=='auth/popup-closed-by-user'?'أُغلقت نافذة الدخول':'تعذّر الدخول: '+(e.code||''))}
+}
+$$('[data-p]').forEach(b=>b.onclick=()=>b.dataset.p=='Google'?login(true):toast('Facebook غير مفعل بعد، استخدم Google'));
+$('#lform').onsubmit=e=>{e.preventDefault();login(false)};
+Au.onAuthStateChanged(auth,async u=>{if(u&&!uid&&me)await boot(u,'');else if(!u&&me){st.set('sg_user',null);location.reload()}});
+
+/* data hooks used by the app */
+CL.post=np=>addDoc(collection(db,'posts'),{u:me,s:np.s,t:np.t,c:[],lk:[],uid,ts:serverTimestamp()}).catch(()=>toast('تعذّر النشر'));
+CL.like=p=>{if(p.id)updateDoc(doc(db,'posts',p.id),{lk:p.k?arrayUnion(uid):arrayRemove(uid)}).catch(()=>{})};
+CL.comment=(p,c)=>{if(p.id)updateDoc(doc(db,'posts',p.id),{c:arrayUnion(c)}).catch(()=>{})};
+CL.msg=(r,t)=>addDoc(collection(db,'msgs'),{room:r,u:me,t,uid,ts:serverTimestamp()}).catch(()=>toast('تعذّر الإرسال'));
+CL.delMsg=m=>deleteDoc(doc(db,'msgs',m.id)).catch(()=>{});
+
+/* owner tools become real (enforced by the Firestore rules) */
+window.grant=n=>{const had=!!badges[n]&&n!='مؤسس شغف';setDoc(doc(db,'flags',nm(n)),{u:n,badge:had?null:'gift',boost:!had},{merge:true}).catch(err);toast(had?'سُحبت العلامة من '+n:'مُنح '+n+' علامة التوثيق ودعم الظهور')};
+$('#aBan').onclick=()=>{const n=tgt,b=!!banned[n];setDoc(doc(db,'flags',nm(n)),{u:n,ban:!b},{merge:true}).catch(err);toast(b?'تم فك الحظر عن '+n:'تم حظر '+n)};
+$('#aSend').onclick=()=>{const t=$('#aTxt').value.trim();if(!t){toast('اكتب نص التنبيه');return}setDoc(doc(db,'warns',nm(tgt)),{list:arrayUnion(t)},{merge:true}).catch(err);$('#aTxt').value='';$('#aWbox').hidden=true;toast('تم إرسال التنبيه إلى '+tgt)};
+$('#uRep').onclick=()=>{addDoc(collection(db,'reports'),{to:ut,by:me,ts:serverTimestamp()}).catch(()=>{});closeM('uModal');toast('تم إرسال البلاغ للمشرفين')};
+$('#oBtn').onclick=()=>toast(isOwner?'تم تفعيل وضع المالك':'الوضع للمالك فقط');
+$('#vGo').onclick=()=>{closeM('vModal');toast('الدفع الحقيقي يحتاج ربط بوابة دفع. هذا الزر للتفعيل التجريبي فقط.')};
+$('#outBtn').onclick=async()=>{st.set('sg_user',null);try{await Au.signOut(auth)}catch(e){}location.reload()};
+let dc2=0;$('#delBtn').onclick=async function(){if(!dc2){dc2=1;this.textContent='اضغط مرة ثانية للتأكيد';setTimeout(()=>{dc2=0;this.textContent='حذف الحساب نهائيًا'},4000);return}try{await deleteDoc(doc(db,'names',nm(me)));await deleteDoc(doc(db,'users',uid));await Au.deleteUser(auth.currentUser)}catch(e){}st.clear();location.reload()};
+}catch(e){console.error(e);toast('تعذّر الاتصال بالسحابة')}}
+</script>
+</body>
+</html>
