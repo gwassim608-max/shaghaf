@@ -148,7 +148,19 @@ function uploadViaFirebaseStorage(
   const storageRef = ref(storage, path);
 
   return new Promise((resolve, reject) => {
+    let settled = false;
     const task = uploadBytesResumable(storageRef, payload, { contentType: mimeType });
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        task.cancel();
+      } catch {
+        // ignore cancel error
+      }
+      reject(new Error('UPLOAD_TIMEOUT'));
+    }, 15_000);
+
     task.on(
       'state_changed',
       (snap) => {
@@ -156,8 +168,16 @@ function uploadViaFirebaseStorage(
           onProgress(Math.min(99, Math.round((snap.bytesTransferred / snap.totalBytes) * 100)));
         }
       },
-      (err) => reject(err),
+      (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      },
       async () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         try {
           const url = await getDownloadURL(task.snapshot.ref);
           onProgress?.(100);

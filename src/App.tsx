@@ -6,6 +6,7 @@ import {
   Crown,
   Gamepad2,
   Home,
+  Image as ImageIcon,
   Mic,
   MicOff,
   Newspaper,
@@ -33,7 +34,7 @@ import { BadgeIcon } from './components/BadgeIcon';
 import { Modals, type ActiveModal } from './components/Modals';
 import { OfflineIndicator, PWAInstallButton } from './components/PWAInstallButton';
 import { calcLevel, formatXp, PLAYABLE_GAMES } from './lib/constants';
-import { getServerTheme } from './lib/serverThemes';
+import { resolvePageWallpaper } from './lib/serverThemes';
 import type { NavTab } from './types';
 
 class ErrorBoundary extends React.Component<
@@ -188,6 +189,8 @@ function ShaghafShell() {
     playingMap,
     totalUsersCount,
     dndMode,
+    liteMode,
+    pageBgPref,
     isOwner,
     lang,
     t,
@@ -264,7 +267,7 @@ function ShaghafShell() {
     setTab('profile');
   };
 
-  const activeServerTheme = getServerTheme(selectedServer);
+  const pageWallpaper = resolvePageWallpaper(pageBgPref, selectedServer);
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: t.navHome, icon: <Home className="w-5 h-5" /> },
@@ -290,14 +293,52 @@ function ShaghafShell() {
   ];
 
   return (
-    <div
-      className="min-h-screen bg-[#09090F] text-[#F8FAFC] flex flex-col"
-      style={{
-        backgroundImage: `radial-gradient(circle at top center, ${activeServerTheme.accentFrom}1F 0%, transparent 48%)`,
-      }}
-    >
+    <div className="relative min-h-screen text-[#F8FAFC] flex flex-col">
+      {/* Full-Page Fixed Viewport Wallpaper */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#09090F]"
+      >
+        {pageWallpaper.mode === 'mosaic' && !liteMode && pageWallpaper.collageImages ? (
+          <div className="absolute inset-0 grid grid-cols-2 sm:grid-cols-3 grid-rows-3 sm:grid-rows-2 gap-0">
+            {pageWallpaper.collageImages.map((imgUrl, idx) => (
+              <div key={imgUrl + idx} className="relative overflow-hidden">
+                <img
+                  src={imgUrl}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover opacity-55 scale-105"
+                />
+              </div>
+            ))}
+          </div>
+        ) : pageWallpaper.mode !== 'solid' && pageWallpaper.imageUrl ? (
+          <img
+            src={pageWallpaper.imageUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 w-full h-full object-cover opacity-55 transition-opacity duration-500"
+          />
+        ) : null}
+
+        {/* Calibrated Readability Scrim + Server Accent Atmospheric Glow */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(9,9,15,0.58) 0%, rgba(9,9,15,0.68) 45%, rgba(9,9,15,0.88) 100%)',
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(circle at top center, ${pageWallpaper.accentColor}29 0%, transparent 55%)`,
+          }}
+        />
+      </div>
+
       {/* 3-Zone Top Bar Contract (Desktop & Mobile <= 56px) */}
-      <header className="sticky top-0 z-30 h-14 border-b border-white/[0.08] bg-[#09090F]/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 h-14 border-b border-white/[0.08] bg-[#09090F]/72 backdrop-blur-md">
         <div className="max-w-7xl mx-auto h-full px-4 lg:px-6 flex items-center justify-between gap-6">
           {/* Zone 1: Brand wordmark */}
           <button
@@ -349,10 +390,10 @@ function ShaghafShell() {
       </header>
 
       {/* Main Responsive Workspace */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-6 py-4 lg:py-6 pb-20 lg:pb-8 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-start">
+      <div className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 lg:px-6 py-4 lg:py-6 pb-20 lg:pb-8 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-start">
         {/* Left/Right Contextual Sidebar (Desktop) */}
         <aside className="hidden lg:block space-y-4 sticky top-20">
-          <div className="rounded-2xl bg-[#12121D] border border-white/[0.08] p-4 space-y-4">
+          <div className="rounded-2xl bg-[#12121D]/78 backdrop-blur-md border border-white/[0.08] p-4 space-y-4">
             <div className="flex items-center gap-3">
               <img
                 src="/assets/aistudio/bg_c136e6ea.jpg"
@@ -459,7 +500,7 @@ function ShaghafShell() {
             </div>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border border-white/[0.08] bg-[#12121D]">
+          <div className="rounded-2xl overflow-hidden border border-white/[0.08] bg-[#12121D]/78 backdrop-blur-md">
             <img
               src="/assets/aistudio/shaghaf-cover_9b6d74ed.png"
               alt="Shaghaf Gaming Arena"
@@ -475,8 +516,8 @@ function ShaghafShell() {
 
         {/* Active View */}
         <main className="min-w-0">
-          {/* Top-Right Community Live Counters + Active Playing Game Status */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 rounded-2xl bg-[#12121D] border border-white/[0.08] px-3.5 py-2.5">
+          {/* Top-Right Community Live Counters + Active Playing Game Status + Wallpaper Picker */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 rounded-2xl bg-[#12121D]/78 backdrop-blur-md border border-white/[0.08] px-3.5 py-2.5">
             <div className="flex flex-wrap items-center gap-3 text-xs font-bold tabular-nums">
               <span className="text-slate-200 flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
@@ -495,22 +536,35 @@ function ShaghafShell() {
               </span>
             </div>
 
-            <label className="flex items-center gap-1.5 text-xs text-slate-300">
-              <Gamepad2 className="w-4 h-4 text-violet-400 shrink-0" />
-              <select
-                aria-label={t.selectPlayingGame}
-                value={playingMap[firebaseUser.uid] || profile.playingGame || ''}
-                onChange={(e) => void setPlayingGame(e.target.value)}
-                className="h-9 px-2.5 rounded-xl bg-[#1A1A29] border border-white/10 text-xs font-semibold text-white focus:outline-none focus:border-violet-500"
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setModal({ type: 'wallpaper' })}
+                aria-label={t.pageWallpaperTitle}
+                title={t.pageWallpaperTitle}
+                className="h-9 px-2.5 rounded-xl bg-[#1A1A29]/90 hover:bg-violet-600/20 border border-white/10 hover:border-violet-400/50 text-xs font-bold text-violet-300 flex items-center gap-1.5 whitespace-nowrap"
               >
-                <option value="">{t.selectPlayingGame}</option>
-                {PLAYABLE_GAMES.map((g) => (
-                  <option key={g} value={g}>
-                    {t.playingNow}: {g}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">{t.pageWallpaperBtn}</span>
+              </button>
+
+              <label className="flex items-center gap-1.5 text-xs text-slate-300">
+                <Gamepad2 className="w-4 h-4 text-violet-400 shrink-0" />
+                <select
+                  aria-label={t.selectPlayingGame}
+                  value={playingMap[firebaseUser.uid] || profile.playingGame || ''}
+                  onChange={(e) => void setPlayingGame(e.target.value)}
+                  className="h-9 px-2.5 rounded-xl bg-[#1A1A29]/90 border border-white/10 text-xs font-semibold text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value="">{t.selectPlayingGame}</option>
+                  {PLAYABLE_GAMES.map((g) => (
+                    <option key={g} value={g}>
+                      {t.playingNow}: {g}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
           {/* Mobile Utility Strip (Bot + Notifications + Settings) */}

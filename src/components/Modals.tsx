@@ -1,11 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { Award, Ban, Bot, CheckCircle2, Hash, ImagePlus, ShieldAlert, Smile, Trophy, Video as VideoIcon, X } from 'lucide-react';
+import { Award, Ban, Bot, CheckCircle2, Hash, Image as ImageIcon, ImagePlus, ShieldAlert, Smile, Trophy, Video as VideoIcon, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BAN_DURATIONS, extractHashtags, LIMITS, PAYMENT_METHODS, REGIONS, SERVERS } from '../lib/constants';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { uploadMediaFile } from '../lib/uploadMedia';
-import { getGameCoverImage } from '../lib/serverThemes';
+import { FULL_PAGE_COLLAGE_PHOTOS, getGameCoverImage, PAGE_WALLPAPER_PRESETS } from '../lib/serverThemes';
 import type { BadgeRequest, Language, ServiceListing, TournamentCategory } from '../types';
 import { MemePicker } from './MemePicker';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -20,6 +20,7 @@ export type ActiveModal =
   | { type: 'order'; service: ServiceListing }
   | { type: 'editProfile' }
   | { type: 'settings' }
+  | { type: 'wallpaper' }
   | { type: 'notifications' }
   | { type: 'badgeRequest' }
   | { type: 'botInbox' }
@@ -85,11 +86,13 @@ export function Modals({
     t,
     liteMode,
     dndMode,
+    pageBgPref,
     autoModPopup,
     adminWarnings,
     setLanguage,
     setLiteMode,
     setDndMode,
+    setPageBgPref,
     updateProfileFields,
     checkTextModeration,
     moderateSubmission,
@@ -115,10 +118,14 @@ export function Modals({
   const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
   const [postMemeUrl, setPostMemeUrl] = useState<string | null>(null);
   const [showPostMemes, setShowPostMemes] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [postTopicMismatch, setPostTopicMismatch] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState('');
   const [videoSharedUrl, setVideoSharedUrl] = useState('');
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoTopicMismatch, setVideoTopicMismatch] = useState(false);
 
   const [storyText, setStoryText] = useState('');
 
@@ -155,6 +162,11 @@ export function Modals({
 
   const uid = firebaseUser?.uid || '';
 
+  const getSafeTag = () => {
+    const raw = (profile?.gamerTag || firebaseUser?.displayName || 'Player').trim().slice(0, 16);
+    return raw.length >= 3 ? raw : `${raw}___`.slice(0, 3);
+  };
+
   useEffect(() => {
     if (modal?.type === 'editProfile' && profile) {
       setEditBio(profile.bio || '');
@@ -175,12 +187,16 @@ export function Modals({
       if (modal.type === 'video') {
         if (modal.initialTitle) setVideoTitle(modal.initialTitle);
         setVideoSharedUrl(modal.initialUrl || '');
+        setVideoError(null);
+        setVideoTopicMismatch(false);
       }
       if (modal.type === 'post') {
         setShowPostMemes(false);
+        setPostError(null);
+        setPostTopicMismatch(false);
       }
     }
-  }, [modal, profile, isOwner]);
+  }, [modal, isOwner]);
 
   // Auto-mod popup takes precedence when active
   if (autoModPopup) {
@@ -308,18 +324,60 @@ export function Modals({
 
   const handleCreatePost = async (e: FormEvent) => {
     e.preventDefault();
-    if (!profile || busy) return;
-    const text = postContent.trim();
-    if (!text && !postImageFile && !postMemeUrl) return;
-    if (!checkTextModeration(text, 'post')) return;
-    const ok = await moderateSubmission('post', text, postImageFile?.name || '', postServer);
-    if (!ok) {
-      onClose();
+    if (busy) return;
+    if (!uid || !profile) {
+      const msg =
+        lang === 'ar'
+          ? 'يرجى تسجيل الدخول وإكمال اسم اللاعب أولًا للنشر.'
+          : 'Please sign in and complete your Gamer Tag first.';
+      setPostError(msg);
+      showToast(msg);
       return;
     }
+
+    const text = postContent.trim();
+    if (!text && !postImageFile && !postMemeUrl) {
+      const msg =
+        lang === 'ar'
+          ? 'اكتب نصًا أو أرفق صورة قبل النشر.'
+          : 'Write something or attach an image before publishing.';
+      setPostError(msg);
+      return;
+    }
+
+    setPostError(null);
+    setPostTopicMismatch(false);
+
+    if (!checkTextModeration(text, 'post')) {
+      setPostError(
+        lang === 'ar'
+          ? 'تعذر النشر حاليًا بسبب قيود الحظر أو المحتوى غير اللائق.'
+          : 'Post blocked by active moderation or ban rules.'
+      );
+      return;
+    }
+
+    const safeServer =
+      postServer && postServer !== 'FOR_YOU' ? postServer : gameServers[0].id;
+
     setBusy(true);
     setUploadProgress(0);
     try {
+      const verdict = await moderateSubmission(
+        'post',
+        text,
+        postImageFile?.name || '',
+        safeServer
+      );
+      if (!verdict.ok) {
+        setPostError(
+          verdict.reason ||
+            (lang === 'ar' ? 'رفض بوت شغف هذا المنشور.' : 'Shaghaf Bot declined this post.')
+        );
+        setPostTopicMismatch(Boolean(verdict.isTopic));
+        return;
+      }
+
       let uploadedImageUrl: string | undefined = postMemeUrl || undefined;
       if (postImageFile) {
         uploadedImageUrl = await uploadMediaFile(postImageFile, 'image', setUploadProgress);
@@ -327,8 +385,8 @@ export function Modals({
       const tags = extractHashtags(text);
       const postPayload: Record<string, unknown> = {
         authorUid: uid,
-        authorTag: profile.gamerTag,
-        server: postServer,
+        authorTag: getSafeTag(),
+        server: safeServer,
         content: text.slice(0, LIMITS.POST_MAX),
         visibility: 'public',
         createdAt: serverTimestamp(),
@@ -343,19 +401,32 @@ export function Modals({
       await addDoc(collection(db, 'posts'), postPayload);
       setPostContent('');
       clearPostImage();
-      addXp(10);
+      setPostError(null);
+      setPostTopicMismatch(false);
+      void addXp(10);
       showToast(lang === 'ar' ? 'تم نشر منشورك!' : 'Post published!');
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
+      console.error('handleCreatePost failed:', err);
+      const msg = err instanceof Error ? err.message : String(err || '');
+      const lower = msg.toLowerCase();
+      let friendly =
+        lang === 'ar'
+          ? 'تعذر نشر المنشور حاليًا، تحقق من الاتصال وحاول مرة أخرى.'
+          : 'Could not publish post, please check connection and try again.';
+
       if (msg === 'FILE_TOO_LARGE_IMAGE') {
-        showToast(t.fileTooLargeImage);
+        friendly = t.fileTooLargeImage;
       } else if (msg.startsWith('UPLOAD_')) {
-        showToast(t.uploadFailed);
-      } else {
-        showToast(lang === 'ar' ? 'تعذر نشر المنشور، حاول مرة أخرى' : 'Could not publish post');
-        handleFirestoreError(err, OperationType.CREATE, 'posts');
+        friendly = t.uploadFailed;
+      } else if (lower.includes('permission') || lower.includes('insufficient')) {
+        friendly =
+          lang === 'ar'
+            ? 'رفضت قاعدة البيانات النشر (تأكد من توثيق الحساب أو عدم وجود حظر أو رابط غير صالح).'
+            : 'Permission denied while publishing post. Check account verification or post format.';
       }
+      setPostError(friendly);
+      showToast(friendly);
     } finally {
       setBusy(false);
       setUploadProgress(0);
@@ -364,28 +435,65 @@ export function Modals({
 
   const handleCreateVideo = async (e: FormEvent) => {
     e.preventDefault();
-    if (!profile || busy) return;
-    const title = videoTitle.trim();
-    if (!title) return;
-    if (!checkTextModeration(title, 'post')) return;
-    const ok = await moderateSubmission('video', title, videoFile?.name || '', postServer);
-    if (!ok) {
-      onClose();
+    if (busy) return;
+    if (!uid || !profile) {
+      const msg =
+        lang === 'ar'
+          ? 'يرجى تسجيل الدخول وإكمال اسم اللاعب أولًا.'
+          : 'Please sign in first.';
+      setVideoError(msg);
       return;
     }
 
-    if (!videoFile && !videoSharedUrl) {
-      showToast(
+    const title = videoTitle.trim();
+    if (!title) {
+      setVideoError(lang === 'ar' ? 'أدخل عنوانًا للفيديو.' : 'Enter a video title.');
+      return;
+    }
+
+    setVideoError(null);
+    setVideoTopicMismatch(false);
+
+    if (!checkTextModeration(title, 'post')) {
+      setVideoError(
         lang === 'ar'
-          ? 'اختر فيديو محفوظًا من جهازك للنشر'
-          : 'Select a saved video from your device'
+          ? 'تعذر النشر حاليًا بسبب قيود الحظر أو المحتوى غير اللائق.'
+          : 'Video blocked by active moderation or ban rules.'
       );
       return;
     }
 
+    if (!videoFile && !videoSharedUrl) {
+      const msg =
+        lang === 'ar'
+          ? 'اختر فيديو محفوظًا من جهازك للنشر'
+          : 'Select a saved video from your device';
+      setVideoError(msg);
+      showToast(msg);
+      return;
+    }
+
+    const safeServer =
+      postServer && postServer !== 'FOR_YOU' ? postServer : gameServers[0].id;
+
     setBusy(true);
     setUploadProgress(0);
     try {
+      const verdict = await moderateSubmission(
+        'video',
+        title,
+        videoFile?.name || '',
+        safeServer
+      );
+      if (!verdict.ok) {
+        setVideoError(
+          verdict.reason ||
+            (lang === 'ar' ? 'رفض بوت شغف هذا الفيديو.' : 'Shaghaf Bot declined this video.')
+        );
+        setVideoTopicMismatch(Boolean(verdict.isTopic));
+        return;
+      }
+
       let finalUrl = videoSharedUrl;
       if (videoFile) {
         finalUrl = await uploadMediaFile(videoFile, 'video', setUploadProgress);
@@ -393,8 +501,8 @@ export function Modals({
       const tags = extractHashtags(title);
       const payload: Record<string, unknown> = {
         authorUid: uid,
-        authorTag: profile.gamerTag,
-        server: postServer,
+        authorTag: getSafeTag(),
+        server: safeServer,
         title: title.slice(0, 140),
         videoUrl: finalUrl.slice(0, 1000),
         visibility: 'public',
@@ -408,19 +516,22 @@ export function Modals({
       setVideoTitle('');
       setVideoSharedUrl('');
       clearVideoFile();
-      addXp(10);
+      setVideoError(null);
+      setVideoTopicMismatch(false);
+      void addXp(10);
       showToast(lang === 'ar' ? 'تم نشر الفيديو بنجاح!' : 'Video published!');
       onClose();
     } catch (err) {
+      console.error('handleCreateVideo failed:', err);
       const msg = err instanceof Error ? err.message : '';
+      let friendly = lang === 'ar' ? 'تعذر نشر الفيديو، حاول مرة أخرى' : 'Could not publish video';
       if (msg === 'FILE_TOO_LARGE_VIDEO') {
-        showToast(t.fileTooLargeVideo);
+        friendly = t.fileTooLargeVideo;
       } else if (msg.startsWith('UPLOAD_')) {
-        showToast(t.uploadFailed);
-      } else {
-        showToast(lang === 'ar' ? 'تعذر نشر الفيديو، حاول مرة أخرى' : 'Could not publish video');
-        handleFirestoreError(err, OperationType.CREATE, 'videos');
+        friendly = t.uploadFailed;
       }
+      setVideoError(friendly);
+      showToast(friendly);
     } finally {
       setBusy(false);
       setUploadProgress(0);
@@ -437,20 +548,20 @@ export function Modals({
     try {
       await addDoc(collection(db, 'stories'), {
         authorUid: uid,
-        authorTag: profile.gamerTag,
+        authorTag: getSafeTag(),
         text: text.slice(0, LIMITS.STORY_MAX),
-        themeIndex: profile.gamerTag.length % 4,
+        themeIndex: getSafeTag().length % 4,
         expiresAtMs: Date.now() + 86_400_000,
         visibility: 'public',
         createdAt: serverTimestamp(),
       });
       setStoryText('');
-      addXp(5);
+      void addXp(5);
       showToast(lang === 'ar' ? 'تم نشر الستوري!' : 'Story published!');
       onClose();
     } catch (err) {
+      console.error('handleCreateStory failed:', err);
       showToast(lang === 'ar' ? 'تعذر نشر الستوري' : 'Could not publish story');
-      handleFirestoreError(err, OperationType.CREATE, 'stories');
     } finally {
       setBusy(false);
     }
@@ -685,7 +796,11 @@ export function Modals({
               <label className="block text-xs text-slate-400 mb-1">{t.serverPrefix}</label>
               <select
                 value={postServer}
-                onChange={(e) => setPostServer(e.target.value)}
+                onChange={(e) => {
+                  setPostServer(e.target.value);
+                  setPostError(null);
+                  setPostTopicMismatch(false);
+                }}
                 className="w-full h-11 px-3 rounded-xl bg-[#1A1A29] border border-white/10 text-sm text-white"
               >
                 {isOwner && (
@@ -706,7 +821,10 @@ export function Modals({
               rows={4}
               maxLength={LIMITS.POST_MAX}
               value={postContent}
-              onChange={(e) => setPostContent(e.target.value)}
+              onChange={(e) => {
+                setPostContent(e.target.value);
+                if (postError) setPostError(null);
+              }}
               placeholder={t.postPlaceholder}
               className="w-full p-3.5 rounded-xl bg-[#1A1A29] border border-white/10 text-sm text-white placeholder:text-slate-500 resize-none focus:outline-none focus:border-violet-500"
             />
@@ -801,12 +919,37 @@ export function Modals({
               </div>
             )}
 
+            {postError && (
+              <div className="rounded-xl bg-rose-500/15 border border-rose-500/40 p-3 text-xs text-rose-200 space-y-2">
+                <p className="font-bold leading-relaxed">{postError}</p>
+                {postTopicMismatch && postServer !== 'Global' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostServer('Global');
+                      setPostError(null);
+                      setPostTopicMismatch(false);
+                    }}
+                    className="min-h-[34px] px-3 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs"
+                  >
+                    {t.switchGeneralServerBtn}
+                  </button>
+                )}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={busy || (!postContent.trim() && !postImageFile && !postMemeUrl)}
               className="w-full min-h-[48px] rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-sm"
             >
-              {busy ? `${t.uploadingMedia}` : t.publish}
+              {busy
+                ? uploadProgress > 0
+                  ? `${t.uploadingMedia} ${uploadProgress}%`
+                  : lang === 'ar'
+                  ? 'جاري النشر...'
+                  : 'Publishing...'
+                : t.publish}
             </button>
           </form>
         </Sheet>
@@ -932,12 +1075,37 @@ export function Modals({
               </div>
             )}
 
+            {videoError && (
+              <div className="rounded-xl bg-rose-500/15 border border-rose-500/40 p-3 text-xs text-rose-200 space-y-2">
+                <p className="font-bold leading-relaxed">{videoError}</p>
+                {videoTopicMismatch && postServer !== 'Global' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostServer('Global');
+                      setVideoError(null);
+                      setVideoTopicMismatch(false);
+                    }}
+                    className="min-h-[34px] px-3 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs"
+                  >
+                    {t.switchGeneralServerBtn}
+                  </button>
+                )}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={busy || !videoTitle.trim() || (!videoFile && !videoSharedUrl)}
               className="w-full min-h-[48px] rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-sm"
             >
-              {busy ? t.uploadingMedia : t.publish}
+              {busy
+                ? uploadProgress > 0
+                  ? `${t.uploadingMedia} ${uploadProgress}%`
+                  : lang === 'ar'
+                  ? 'جاري النشر...'
+                  : 'Publishing...'
+                : t.publish}
             </button>
           </form>
         </Sheet>
@@ -1652,6 +1820,24 @@ export function Modals({
             </div>
 
             <div>
+              <label className="block text-xs text-slate-400 mb-1">{t.pageWallpaperTitle}</label>
+              <select
+                value={pageBgPref}
+                onChange={(e) => {
+                  setPageBgPref(e.target.value);
+                  showToast(t.settingsSaved);
+                }}
+                className="w-full h-11 px-3 rounded-xl bg-[#1A1A29] border border-white/10 text-white"
+              >
+                {PAGE_WALLPAPER_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.labels[lang]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs text-slate-400 mb-1">{t.dndMode}</label>
               <select
                 value={dndMode ? '1' : '0'}
@@ -1739,6 +1925,67 @@ export function Modals({
               >
                 {deleteStep ? t.deleteConfirm : t.deleteAccount}
               </button>
+            </div>
+          </div>
+        </Sheet>
+      )}
+
+      {modal.type === 'wallpaper' && (
+        <Sheet title={t.pageWallpaperTitle} onClose={onClose}>
+          <div className="space-y-3">
+            <p className="text-xs text-slate-300 leading-relaxed">{t.pageWallpaperHint}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {PAGE_WALLPAPER_PRESETS.map((preset) => {
+                const active = pageBgPref === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => {
+                      setPageBgPref(preset.id);
+                      showToast(t.settingsSaved);
+                      onClose();
+                    }}
+                    className={`group relative rounded-2xl overflow-hidden border text-start transition-all min-h-[104px] flex items-end ${
+                      active
+                        ? 'border-violet-400 ring-2 ring-violet-500/50'
+                        : 'border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    {preset.id === 'solid' ? (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#12121D] to-[#09090F]" />
+                    ) : preset.collageImages ? (
+                      <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-0.5 bg-[#09090F]">
+                        {FULL_PAGE_COLLAGE_PHOTOS.map((src, idx) => (
+                          <img
+                            key={src + idx}
+                            src={src}
+                            alt=""
+                            className="w-full h-full object-cover opacity-85"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <img
+                        src={preset.imageUrl}
+                        alt={preset.labels[lang]}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090F]/95 via-[#09090F]/45 to-transparent" />
+                    <div className="relative z-10 w-full p-2.5 flex items-center justify-between gap-1.5">
+                      <span className="text-[11px] font-bold text-white leading-tight truncate">
+                        {preset.labels[lang]}
+                      </span>
+                      {active ? (
+                        <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
+                      ) : (
+                        <ImageIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </Sheet>

@@ -91,6 +91,7 @@ interface AppContextValue {
   chatBanUntilMs: number;
   liteMode: boolean;
   dndMode: boolean;
+  pageBgPref: string;
   autoMod: AutoModState;
   autoModPopup: { label: string; remaining: number } | null;
   toastMsg: string | null;
@@ -98,6 +99,7 @@ interface AppContextValue {
   setLanguage: (l: Language) => Promise<void>;
   setLiteMode: (v: boolean) => Promise<void>;
   setDndMode: (v: boolean) => Promise<void>;
+  setPageBgPref: (pref: string) => void;
   setPlayingGame: (game: string) => Promise<void>;
   signInWithGoogle: (isMinor: boolean) => Promise<void>;
   registerGamerTag: (tag: string, isMinor: boolean) => Promise<boolean>;
@@ -111,7 +113,7 @@ interface AppContextValue {
     text: string,
     fileName?: string,
     server?: string
-  ) => Promise<boolean>;
+  ) => Promise<{ ok: boolean; reason?: string; isTopic?: boolean }>;
   enforceExistingModeration: (
     kind: 'post' | 'video',
     docId: string,
@@ -181,6 +183,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [liteMode, setLiteModeState] = useState<boolean>(() => loadJson('sg_lite', false));
   const [dndMode, setDndModeState] = useState<boolean>(() => loadJson('sg_dnd', false));
+  const [pageBgPref, setPageBgPrefState] = useState<string>(() =>
+    loadJson<string>('sg_page_bg', 'auto')
+  );
   const [blockedMap, setBlockedMap] = useState<Record<string, boolean>>(() =>
     loadJson('sg_blk', {})
   );
@@ -229,8 +234,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ? myFlag.chatBanUntilMs
       : 0;
 
-  const isBanned = !isOwner && (flagBanActive || autoMod.count >= 5);
-  const isChatMuted = !isOwner && (isBanned || chatBanUntilMs > nowMs || autoMod.untilMs > nowMs);
+  const explicitlyUnbanned = Boolean(myFlag && myFlag.ban === false && myFlag.banReason === '');
+  const isBanned = !isOwner && (flagBanActive || (!explicitlyUnbanned && autoMod.count >= 5));
+  const isChatMuted =
+    !isOwner &&
+    (isBanned ||
+      chatBanUntilMs > nowMs ||
+      (!explicitlyUnbanned && autoMod.untilMs > nowMs));
+
+  const setPageBgPref = useCallback((pref: string) => {
+    const clean = (pref || 'auto').trim().slice(0, 40);
+    setPageBgPrefState(clean);
+    saveJson('sg_page_bg', clean);
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -907,10 +923,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     text: string,
     fileName = '',
     server = 'ALL'
-  ): Promise<boolean> => {
+  ): Promise<{ ok: boolean; reason?: string; isTopic?: boolean }> => {
     if (isBanned && !isOwner) {
-      showToast(t.bannedAlert);
-      return false;
+      const rem = banUntilMs > 0 ? ` (${formatRemainingTime(banUntilMs, lang)})` : '';
+      const msg = `${t.bannedAlert}${rem}`;
+      showToast(msg);
+      return { ok: false, reason: msg };
     }
 
     const combined = `${text} ${fileName}`;
@@ -961,16 +979,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (!violationReason) return true;
+    if (!violationReason) return { ok: true };
 
     // For Owner: block off-topic posts cleanly with bot reason without XP penalty/ban
     if (isOwner) {
-      showToast(
+      const msg =
         lang === 'ar'
           ? `🤖 بوت شغف: ${violationReason}`
-          : `🤖 Shaghaf Bot: ${violationReason}`
-      );
-      return false;
+          : `🤖 Shaghaf Bot: ${violationReason}`;
+      showToast(msg);
+      return { ok: false, reason: msg, isTopic: isTopicViolation };
     }
 
     if (!isTopicViolation) {
@@ -1023,12 +1041,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => {});
     }
 
-    showToast(
+    const botMsg =
       lang === 'ar'
         ? `🤖 رفض البوت المحتوى: ${violationReason}`
-        : `🤖 Removed by Bot: ${violationReason}`
-    );
-    return false;
+        : `🤖 Removed by Bot: ${violationReason}`;
+    showToast(botMsg);
+    return { ok: false, reason: botMsg, isTopic: isTopicViolation };
   };
 
   // Sweep existing violating or off-topic posts/videos across all servers
@@ -1363,6 +1381,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         chatBanUntilMs,
         liteMode,
         dndMode,
+        pageBgPref,
         autoMod,
         autoModPopup,
         toastMsg,
@@ -1370,6 +1389,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setLanguage,
         setLiteMode,
         setDndMode,
+        setPageBgPref,
         setPlayingGame,
         signInWithGoogle,
         registerGamerTag,

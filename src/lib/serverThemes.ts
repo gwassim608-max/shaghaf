@@ -277,3 +277,142 @@ export function getGameCoverImage(gameName: string): string {
   if (lower.includes('mobile legends')) return '/api/server-bg/ML.svg';
   return '/api/server-bg/GLOBAL.svg';
 }
+
+export interface PageWallpaperPreset {
+  id: string;
+  imageUrl?: string;
+  collageImages?: string[];
+  accentColor: string;
+  labels: Record<Language, string>;
+}
+
+export const FULL_PAGE_COLLAGE_PHOTOS = [
+  '/backgrounds/free_fire.jpg',
+  '/backgrounds/pubg_mobile.jpg',
+  '/backgrounds/the_finals.jpg',
+  '/backgrounds/valorant.jpg',
+  '/backgrounds/warzone_fortnite.jpg',
+  '/assets/aistudio/shaghaf-cover_9b6d74ed.png',
+];
+
+export const PAGE_WALLPAPER_PRESETS: PageWallpaperPreset[] = [
+  {
+    id: 'auto',
+    imageUrl: '/backgrounds/the_finals.jpg',
+    collageImages: FULL_PAGE_COLLAGE_PHOTOS,
+    accentColor: '#7C3AED',
+    labels: {
+      ar: 'تلقائي حسب السيرفر',
+      en: 'Auto by Server',
+      fr: 'Auto selon le serveur',
+    },
+  },
+  {
+    id: 'mosaic',
+    imageUrl: '/backgrounds/the_finals.jpg',
+    collageImages: FULL_PAGE_COLLAGE_PHOTOS,
+    accentColor: '#8B5CF6',
+    labels: {
+      ar: 'تشكيلة كل الألعاب',
+      en: 'All Games Collage',
+      fr: 'Collage tous jeux',
+    },
+  },
+  {
+    id: 'shaghaf',
+    imageUrl: '/assets/aistudio/shaghaf-cover_9b6d74ed.png',
+    accentColor: '#7C3AED',
+    labels: {
+      ar: 'ساحة شغف الرئيسية',
+      en: 'Shaghaf Arena',
+      fr: 'Arène Shaghaf',
+    },
+  },
+  {
+    id: 'free_fire',
+    imageUrl: '/backgrounds/free_fire.jpg',
+    accentColor: '#F59E0B',
+    labels: { ar: 'Free Fire', en: 'Free Fire', fr: 'Free Fire' },
+  },
+  {
+    id: 'pubg_mobile',
+    imageUrl: '/backgrounds/pubg_mobile.jpg',
+    accentColor: '#D97706',
+    labels: { ar: 'PUBG Mobile', en: 'PUBG Mobile', fr: 'PUBG Mobile' },
+  },
+  {
+    id: 'the_finals',
+    imageUrl: '/backgrounds/the_finals.jpg',
+    accentColor: '#DC2626',
+    labels: { ar: 'THE FINALS', en: 'THE FINALS', fr: 'THE FINALS' },
+  },
+  {
+    id: 'valorant',
+    imageUrl: '/backgrounds/valorant.jpg',
+    accentColor: '#EF4444',
+    labels: { ar: 'Valorant', en: 'Valorant', fr: 'Valorant' },
+  },
+  {
+    id: 'warzone_fortnite',
+    imageUrl: '/backgrounds/warzone_fortnite.jpg',
+    accentColor: '#10B981',
+    labels: {
+      ar: 'Warzone & Fortnite',
+      en: 'Warzone & Fortnite',
+      fr: 'Warzone & Fortnite',
+    },
+  },
+  {
+    id: 'solid',
+    accentColor: '#7C3AED',
+    labels: {
+      ar: 'داكن صافي (بدون صورة)',
+      en: 'Dark Minimal (No Image)',
+      fr: 'Sombre minimaliste',
+    },
+  },
+];
+
+export function resolvePageWallpaper(
+  pref: string,
+  selectedServer: string
+): {
+  mode: 'single' | 'mosaic' | 'solid';
+  imageUrl?: string;
+  collageImages?: string[];
+  accentColor: string;
+} {
+  if (pref === 'solid') {
+    return { mode: 'solid', accentColor: '#7C3AED' };
+  }
+  if (pref === 'mosaic') {
+    return {
+      mode: 'mosaic',
+      collageImages: FULL_PAGE_COLLAGE_PHOTOS,
+      accentColor: '#7C3AED',
+    };
+  }
+  const explicit = PAGE_WALLPAPER_PRESETS.find((p) => p.id === pref && p.id !== 'auto');
+  if (explicit?.imageUrl) {
+    return {
+      mode: 'single',
+      imageUrl: explicit.imageUrl,
+      accentColor: explicit.accentColor,
+    };
+  }
+  // Auto by active server
+  const theme = getServerTheme(selectedServer);
+  if (selectedServer === 'ALL') {
+    return {
+      mode: 'mosaic',
+      collageImages: FULL_PAGE_COLLAGE_PHOTOS,
+      accentColor: theme.accentFrom,
+    };
+  }
+  return {
+    mode: 'single',
+    imageUrl: theme.imageUrl,
+    accentColor: theme.accentFrom,
+  };
+}
+

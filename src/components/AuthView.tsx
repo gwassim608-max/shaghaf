@@ -41,8 +41,19 @@ export function AuthView({ onOpenTerms }: AuthViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090F] text-[#F8FAFC] flex items-center justify-center p-4 lg:p-8">
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 rounded-3xl overflow-hidden border border-white/10 bg-[#12121D] items-stretch">
+    <div className="relative min-h-screen bg-[#09090F] text-[#F8FAFC] flex items-center justify-center p-4 lg:p-8 overflow-hidden">
+      {/* Full-Page Background on Auth Screen */}
+      <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none">
+        <img
+          src="/assets/aistudio/shaghaf-cover_9b6d74ed.png"
+          alt=""
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover opacity-45 scale-105 blur-[2px]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#09090F]/70 via-[#09090F]/65 to-[#09090F]/90" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 rounded-3xl overflow-hidden border border-white/15 bg-[#12121D]/85 backdrop-blur-md items-stretch shadow-2xl">
         {/* Visual Hero Showcase */}
         <div className="relative min-h-[260px] lg:min-h-[600px] flex flex-col justify-between p-6 lg:p-10 bg-[#0D0D16]">
           {imgCoverOk ? (

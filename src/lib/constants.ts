@@ -334,7 +334,7 @@ const SERVER_TOPIC_KEYWORDS: Record<string, string[]> = {
     'dust2', 'mirage', 'awp', 'faceit', 'valve', 'inferno', 'ak47',
   ],
   'League of Legends': [
-    'league of legends', 'lol', 'ليج اوف ليجندز', 'لول', 'summoner', 'rift',
+    'league of legends', 'ليج اوف ليجندز', 'summoner', 'rift',
     'worlds', 'yasuo', 'faker', 'adc', 'jungle', 'baron', 'tft',
   ],
   'Rocket League': [

@@ -273,6 +273,10 @@ export const COPY: Record<Language, Record<string, string>> = {
     squadPickAtLeastOne: 'اختر عضوًا واحدًا على الأقل للمشاركة',
     squadTicketRosterTitle: 'تشكيلة السكواد المشاركة',
     squadNotifiedBadge: 'تم إرسال الروم للأعضاء المختارين عبر البوت',
+    pageWallpaperBtn: 'خلفية الصفحة',
+    pageWallpaperTitle: 'خلفيات على كامل الصفحة',
+    pageWallpaperHint: 'اختر خلفية تغطي كامل الصفحة تلقائيًا حسب السيرفر أو ثبّت خلفية لعبتك المفضلة:',
+    switchGeneralServerBtn: 'النشر في الساحة العامة (Global)',
   },
   en: {
     brand: 'شغف | gwassim_097',
@@ -546,6 +550,10 @@ export const COPY: Record<Language, Record<string, string>> = {
     squadPickAtLeastOne: 'Select at least 1 participating member',
     squadTicketRosterTitle: 'Participating Squad Lineup',
     squadNotifiedBadge: 'Room credentials sent to selected members via Bot',
+    pageWallpaperBtn: 'Wallpaper',
+    pageWallpaperTitle: 'Full-Page Wallpapers',
+    pageWallpaperHint: 'Choose a full-page wallpaper automatically by server or lock your favorite game background:',
+    switchGeneralServerBtn: 'Switch to General Feed (Global)',
   },
   fr: {
     brand: 'شغف | gwassim_097',
@@ -819,6 +827,10 @@ export const COPY: Record<Language, Record<string, string>> = {
     squadPickAtLeastOne: 'Sélectionnez au moins 1 joueur participant',
     squadTicketRosterTitle: 'Composition du Squad participant',
     squadNotifiedBadge: 'Infos du salon envoyées aux membres via le Bot',
+    pageWallpaperBtn: 'Fond d’écran',
+    pageWallpaperTitle: 'Fonds d’écran pleine page',
+    pageWallpaperHint: 'Choisissez un fond pleine page automatique par serveur ou fixez votre jeu favori :',
+    switchGeneralServerBtn: 'Publier dans le salon général (Global)',
   },
 };
 

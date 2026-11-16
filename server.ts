@@ -26,8 +26,10 @@ try {
 
 const IMAGE_MIME_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
+  'image/pjpeg': 'jpg',
   'image/jpg': 'jpg',
   'image/png': 'png',
+  'image/x-png': 'png',
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/bmp': 'bmp',
@@ -62,6 +64,7 @@ async function verifyFirebaseUser(authHeader: string | undefined): Promise<Verif
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
+        signal: AbortSignal.timeout(5000),
       }
     );
     if (!res.ok) return null;
@@ -1008,7 +1011,7 @@ const SERVER_TOPIC_TERMS: Record<string, string[]> = {
   'Apex Legends': ['apex', 'apex legends', 'ابيكس', 'أبيكس', 'algs', 'wraith', 'octane', 'heirloom', 'respawn'],
   'Call of Duty': ['call of duty', 'cod', 'codm', 'كول اوف ديوتي', 'كود موبايل', 'nuketown', 'bo6', 'mw3', 'black ops', 'modern warfare'],
   CS2: ['cs2', 'csgo', 'counter strike', 'counter-strike', 'كونتر سترايك', 'dust2', 'mirage', 'awp', 'faceit', 'valve'],
-  'League of Legends': ['league of legends', 'lol', 'ليج اوف ليجندز', 'لول', 'summoner', 'worlds', 'yasuo', 'faker', 'tft'],
+  'League of Legends': ['league of legends', 'ليج اوف ليجندز', 'summoner', 'worlds', 'yasuo', 'faker', 'tft'],
   'Rocket League': ['rocket league', 'روكت ليق', 'روكت ليج', 'rlcs', 'flip reset', 'fennec', 'dominus'],
   'Mobile Legends': ['mobile legends', 'mlbb', 'موبايل ليجندز', 'mpl', 'mythic', 'land of dawn', 'moonton'],
   'EA FC': ['ea fc', 'eafc', 'fc25', 'fc 25', 'fc26', 'fc 26', 'fifa', 'فيفا', 'ultimate team', 'fut', 'fc points'],
@@ -1096,12 +1099,12 @@ async function checkOffTopicWithGemini(
   try {
     const mod = await import('@google/genai');
     const ai = new mod.GoogleGenAI({ apiKey });
-    const prompt = `You are a strict topic moderator for gaming community server "${serverId}".
+    const prompt = `You are a fair topic moderator for gaming community server "${serverId}".
 User wrote this post inside server "${serverId}":
 """${text.slice(0, 400)}"""
 
-Determine if this post is clearly OFF-TOPIC for "${serverId}" (e.g., posting programming/coding/homework/cooking/crypto/or a completely different video game inside a "${serverId}" server).
-If it's generic gaming hype, greetings, LFG, "good game", or related to "${serverId}", it is ON-TOPIC (offTopic: false).
+Determine ONLY if this post is clearly and unmistakably OFF-TOPIC for "${serverId}" (such as posting programming/coding tutorials, cooking recipes, crypto trading, school homework, or explicitly another specific video game inside "${serverId}").
+Allow greetings, casual player chat, humor, LFG/squad requests, short image captions, or gaming hype (offTopic: false).
 Respond in JSON ONLY: {"offTopic": boolean, "reasonAr": "short Arabic explanation if offTopic", "reasonEn": "short English explanation if offTopic"}`;
 
     const resp = await Promise.race([
@@ -1113,7 +1116,8 @@ Respond in JSON ONLY: {"offTopic": boolean, "reasonAr": "short Arabic explanatio
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
     ]);
     if (!resp || !resp.text) return null;
-    const parsed = JSON.parse(resp.text) as {
+    const cleanedJson = resp.text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsed = JSON.parse(cleanedJson) as {
       offTopic?: boolean;
       reasonAr?: string;
       reasonEn?: string;

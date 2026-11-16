@@ -210,7 +210,7 @@ function PostCard({
 
   return (
     <article
-      className={`rounded-2xl bg-[#12121D] border p-4 lg:p-5 transition-colors ${
+      className={`rounded-2xl bg-[#12121D]/78 backdrop-blur-md border p-4 lg:p-5 transition-colors ${
         authorFlag?.badge === 'own'
           ? 'border-amber-500/40'
           : 'border-white/[0.08] hover:border-white/15'
@@ -593,7 +593,7 @@ export function FeedView({
               className={`min-h-[42px] px-3.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 border transition-colors ${
                 active
                   ? 'bg-violet-600 border-violet-500 text-white'
-                  : 'bg-[#12121D] border-white/[0.08] text-slate-300 hover:text-white hover:border-white/20'
+                  : 'bg-[#12121D]/78 backdrop-blur-md border-white/[0.08] text-slate-300 hover:text-white hover:border-white/20'
               }`}
             >
               {srv.labels[lang]}
@@ -643,7 +643,7 @@ export function FeedView({
 
       {/* Search + Videos + Quick Post Bar */}
       <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
-        <label className="flex-1 min-w-[180px] h-12 px-3.5 rounded-xl bg-[#12121D] border border-white/[0.08] flex items-center gap-2.5 focus-within:border-violet-500">
+        <label className="flex-1 min-w-[180px] h-12 px-3.5 rounded-xl bg-[#12121D]/78 backdrop-blur-md border border-white/[0.08] flex items-center gap-2.5 focus-within:border-violet-500">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             type="search"
@@ -686,7 +686,7 @@ export function FeedView({
               className={`min-h-[34px] px-3 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 border transition-colors ${
                 isActive
                   ? 'bg-violet-600 border-violet-500 text-white'
-                  : 'bg-[#12121D] border-white/[0.08] text-violet-300 hover:border-violet-400/50'
+                  : 'bg-[#12121D]/78 backdrop-blur-md border-white/[0.08] text-violet-300 hover:border-violet-400/50'
               }`}
             >
               #{tag}
@@ -707,7 +707,7 @@ export function FeedView({
 
       {/* Posts Stream */}
       {visiblePosts.length === 0 ? (
-        <div className="rounded-2xl bg-[#12121D] border border-white/[0.08] p-10 text-center text-sm text-slate-400">
+        <div className="rounded-2xl bg-[#12121D]/78 backdrop-blur-md border border-white/[0.08] p-10 text-center text-sm text-slate-400">
           {t.noPosts}
         </div>
       ) : (
