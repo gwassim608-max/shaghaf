@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Crown,
   ExternalLink,
   KeyRound,
   Play,
@@ -42,6 +43,8 @@ import type {
   LfgPost,
   MarketOrder,
   ServiceListing,
+  Squad,
+  SquadMemberEntry,
   Tournament,
   TournamentCategory,
   TournamentParticipant,
@@ -49,6 +52,7 @@ import type {
 } from '../types';
 import { BadgeIcon } from './BadgeIcon';
 import { InAppVideoPlayer } from './InAppVideoPlayer';
+import { SquadLineupModal, SquadManagerModal } from './SquadModals';
 
 interface ArenaHubViewProps {
   onOpenCreate: (kind: 'tournament' | 'lfg' | 'service') => void;
@@ -81,34 +85,158 @@ function inferTournamentCategory(trn: Tournament): TournamentCategory {
   return 'friendly';
 }
 
+function stableHash(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function buildTournamentRules(game: string, mode: 'solo' | 'squad', gameId: string, rank: string): string[] {
+  const gameLower = game.toLowerCase();
+  const safeId = gameId || 'المسجل بالحساب';
+  const safeRank = rank || 'الرتبة المسجلة';
+  if (gameLower.includes('free fire')) {
+    return [
+      `الدخول بالمعرّف المسجّل فقط (${safeId}) وعدم تبديل الحساب أثناء الروم.`,
+      'يُمنع منعًا باتًا استخدام الهاك أو السكربتات أو استغلال الغليتشات (حظر وإقصاء فوري).',
+      mode === 'squad'
+        ? 'الالتزام بتشكيلة السكواد الكاملة وعدم التحالف بين الفرق (Teaming).'
+        : 'طور فردي: يُمنع أي تحالف أو مساعدة بين اللاعبين داخل الخريطة.',
+      'التواجد داخل اللوبي قبل الإقلاع بـ 10 دقائق؛ يُغلق الروم تلقائيًا عند بدء المباراة.',
+      'حفظ لقطة شاشة (Screenshot) للنتيجة النهائية عند انتهاء الجولات.',
+    ];
+  }
+  if (gameLower.includes('finals')) {
+    return [
+      `التسجيل معتمد بمعرّف Embark الخاص بك (${safeId}) ورتبة (${safeRank}).`,
+      'مواجهات Cashout بنظام 3v3v3v3؛ يُمنع الخروج المتعمد أو استخدام برامج خارجية.',
+      'تفعيل اللعب المشترك (Crossplay ON) قبل الانضمام للوبي الخاص بـ 15 دقيقة.',
+      'احترام قواعد اللعب النظيف وعدم استغلال أخطاء الخرائط.',
+    ];
+  }
+  if (gameLower.includes('pubg')) {
+    return [
+      `الدخول بـ PUBG ID المطابق لملفك (${safeId}) وبمنظور البطولة المحدد.`,
+      'ممنوع استخدام المحاكيات في بطولات الموبايل أو أي أدوات مساعدة خارجية.',
+      'يبدأ فتح الروم قبل الموعد بـ 15 دقيقة والإقلاع في الموعد المحدد تمامًا.',
+      'عدم التحالف مع الخصوم والالتزام بتعليمات منظمي البطولة.',
+    ];
+  }
+  return [
+    `الدخول بمعرّف اللعبة المسجّل في ملفك (${safeId}) ورتبة (${safeRank}).`,
+    'منع الغش أو البرامج الخارجية أو التحالف غير المسموح به.',
+    'الحضور في الروم قبل الموعد بـ 15 دقيقة والانتظار حتى إشارة الانطلاق.',
+    'تصوير شاشة النتيجة النهائية لتوثيق الفوز والمكافآت.',
+  ];
+}
+
+function buildFallbackTicket(
+  tournament: Tournament,
+  uid: string,
+  gamerTag: string,
+  gameId: string,
+  rank: string,
+  participant?: TournamentParticipant
+): TournamentTicket {
+  const mode: 'solo' | 'squad' = tournament.mode === 'solo' ? 'solo' : 'squad';
+  const trnSeed = stableHash(tournament.id || tournament.title || tournament.game);
+  const playerSeed = stableHash(`${tournament.id}:${uid}`);
+  const gameLower = (tournament.game || '').toLowerCase();
+  const gamePrefix = gameLower.includes('free fire')
+    ? 'FF'
+    : gameLower.includes('pubg')
+    ? 'PM'
+    : gameLower.includes('finals')
+    ? 'TF'
+    : gameLower.includes('valorant')
+    ? 'VAL'
+    : gameLower.includes('fortnite')
+    ? 'FN'
+    : gameLower.includes('warzone')
+    ? 'WZ'
+    : gameLower.includes('fc')
+    ? 'FC'
+    : 'SHG';
+
+  const roomNumA = 1000 + (trnSeed % 9000);
+  const roomNumB = 1000 + ((trnSeed >> 8) % 9000);
+  const finalGameId = (participant?.gameId || gameId || gamerTag || 'Player').slice(0, 40);
+  const finalRank = (participant?.rank || rank || 'Competitor').slice(0, 40);
+
+  return {
+    tournamentId: tournament.id,
+    title: tournament.title,
+    game: tournament.game,
+    mode,
+    officialSource: tournament.officialSource || 'Shaghaf Official Arena',
+    sourceUrl: tournament.sourceUrl?.startsWith('https://') ? tournament.sourceUrl : undefined,
+    registrationCode: participant?.registrationCode || `${gamePrefix}-${String((playerSeed % 90000) + 10000)}`,
+    roomId: participant?.roomId || `${gamePrefix}-${roomNumA}-${roomNumB}`,
+    roomCode: participant?.roomCode || `SHG${100 + ((trnSeed >> 4) % 899)}`,
+    matchTime: participant?.matchTime || tournament.dateLabel || 'اليوم · 20:00',
+    waitTime: 'يُفتح الروم قبل الموعد بـ 15 دقيقة · ينتظرك المنظمون حتى قبل الإقلاع بـ 5 دقائق',
+    rules: buildTournamentRules(tournament.game, mode, finalGameId, finalRank),
+    filledProfile: {
+      gamerTag: participant?.squadName
+        ? `[${participant.squadTag || 'SQD'}] ${participant.squadName}`
+        : participant?.gamerTag || gamerTag,
+      gameId: finalGameId,
+      rank: finalRank,
+    },
+    ...(participant?.squadName && Array.isArray(participant.selectedMembers)
+      ? {
+          squad: {
+            id: participant.squadId || 'squad',
+            name: participant.squadName,
+            tag: participant.squadTag || 'SQD',
+            selectedMembers: participant.selectedMembers,
+          },
+        }
+      : {}),
+    createdAtMs: Date.now(),
+  };
+}
+
 function TournamentCard({
   tournament,
   cachedTicket,
   onOpenProfile,
   onSaveTicket,
+  onRemoveTicket,
   onOpenTicket,
   onIncompleteProfile,
+  onRequestSquadRegister,
 }: {
   tournament: Tournament;
   cachedTicket?: TournamentTicket;
   onOpenProfile: (uid: string, tag?: string) => void;
   onSaveTicket: (ticket: TournamentTicket) => void;
+  onRemoveTicket: (tournamentId: string) => void;
   onOpenTicket: (ticket: TournamentTicket) => void;
   onIncompleteProfile: (missingFields: string[], tournamentTitle: string) => void;
+  onRequestSquadRegister: (tournament: Tournament) => void;
 }) {
   const { firebaseUser, profile, flagsMap, lang, t, addXp, showToast, isBanned } = useApp();
   const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
+  const [participantsLoaded, setParticipantsLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
+    setParticipants([]);
+    setParticipantsLoaded(false);
     const unsub = onSnapshot(
       collection(db, 'tournaments', tournament.id, 'participants'),
       (snap) => {
         setParticipants(snap.docs.map((d) => d.data() as TournamentParticipant));
+        setParticipantsLoaded(true);
       },
       () => {
-        // Ignore if bot tournament doc is not yet materialized in Firestore
+        setParticipants([]);
+        setParticipantsLoaded(true);
       }
     );
     return () => unsub();
@@ -116,7 +244,17 @@ function TournamentCard({
 
   if (!firebaseUser || !profile) return null;
   const uid = firebaseUser.uid;
-  const joined = participants.some((p) => p.uid === uid);
+  const myParticipant = participantsLoaded
+    ? participants.find((p) => p.uid === uid) ||
+      participants.find(
+        (p) =>
+          Array.isArray(p.selectedMembers) &&
+          p.selectedMembers.some((m) => m.uid === uid)
+      )
+    : undefined;
+  const joined = Boolean(myParticipant);
+  const isLeaderRegistrant = !myParticipant || myParticipant.uid === uid;
+  const isSquadTournament = tournament.mode !== 'solo';
   const coverUrl = tournament.imageUrl || getGameCoverImage(tournament.game);
   const category = inferTournamentCategory(tournament);
   const categoryLabel =
@@ -126,65 +264,84 @@ function TournamentCard({
       ? t.tournamentCatQualifiers
       : t.tournamentCatFriendly;
 
-  const requestBotTicket = async (): Promise<TournamentTicket | null> => {
-    const gamerTag = (profile.gamerTag || '').trim();
-    const gameId = (profile.gameId || '').trim();
-    const rank = (profile.rank || '').trim();
+  const requestBotTicket = async (viewPass = false): Promise<TournamentTicket | null> => {
+    const gamerTag = (profile.gamerTag || firebaseUser.displayName || 'Player').trim();
+    const gameId = (profile.gameId || myParticipant?.gameId || '').trim();
+    const rank = (profile.rank || myParticipant?.rank || '').trim();
 
-    const missing: string[] = [];
-    if (!gamerTag || gamerTag.length < 3) missing.push('gamerTag');
-    if (!gameId) missing.push('gameId');
-    if (!rank) missing.push('rank');
+    if (!viewPass) {
+      const missing: string[] = [];
+      if (!gamerTag || gamerTag.length < 3) missing.push('gamerTag');
+      if (!gameId) missing.push('gameId');
+      if (!rank) missing.push('rank');
 
-    if (missing.length > 0) {
-      onIncompleteProfile(missing, tournament.title);
-      return null;
+      if (missing.length > 0) {
+        onIncompleteProfile(missing, tournament.title);
+        return null;
+      }
     }
 
-    const token = await firebaseUser.getIdToken();
-    const res = await fetch('/api/tournaments/bot-register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        tournamentId: tournament.id,
-        title: tournament.title,
-        game: tournament.game,
-        mode: tournament.mode === 'solo' ? 'solo' : 'squad',
-        dateLabel: tournament.dateLabel,
-        officialSource: tournament.officialSource || 'Shaghaf Official Arena',
-        sourceUrl: tournament.sourceUrl || '',
-        gamerTag,
-        gameId,
-        rank,
-      }),
-    });
+    try {
+      const token = await firebaseUser.getIdToken();
+      const res = await fetch('/api/tournaments/bot-register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tournamentId: tournament.id,
+          title: tournament.title,
+          game: tournament.game,
+          mode: tournament.mode === 'solo' ? 'solo' : 'squad',
+          dateLabel: tournament.dateLabel,
+          officialSource: tournament.officialSource || 'Shaghaf Official Arena',
+          sourceUrl: tournament.sourceUrl || '',
+          gamerTag,
+          gameId: gameId || 'Player',
+          rank: rank || 'Ranked',
+          viewPass,
+        }),
+      });
 
-    if (res.status === 422) {
-      const errData = (await res.json().catch(() => ({}))) as { missingFields?: string[] };
-      onIncompleteProfile(
-        Array.isArray(errData.missingFields) && errData.missingFields.length > 0
-          ? errData.missingFields
-          : ['gameId', 'rank'],
-        tournament.title
-      );
-      return null;
+      if (res.status === 422 && !viewPass) {
+        const errData = (await res.json().catch(() => ({}))) as { missingFields?: string[] };
+        onIncompleteProfile(
+          Array.isArray(errData.missingFields) && errData.missingFields.length > 0
+            ? errData.missingFields
+            : ['gameId', 'rank'],
+          tournament.title
+        );
+        return null;
+      }
+
+      if (res.ok) {
+        const payload = (await res.json()) as { ok?: boolean; ticket?: TournamentTicket };
+        if (payload.ok && payload.ticket) {
+          return payload.ticket;
+        }
+      }
+    } catch {
+      // Fallback below when viewing pass or server is unreachable
     }
 
-    if (!res.ok) {
-      throw new Error('Bot registration failed');
-    }
-
-    const payload = (await res.json()) as { ok?: boolean; ticket?: TournamentTicket };
-    if (!payload.ok || !payload.ticket) {
-      throw new Error('Invalid bot ticket response');
-    }
-    return payload.ticket;
+    return buildFallbackTicket(tournament, uid, gamerTag, gameId, rank, myParticipant);
   };
 
   const handleOpenPass = async () => {
+    if (myParticipant?.roomId && myParticipant?.roomCode) {
+      const firestoreTicket = buildFallbackTicket(
+        tournament,
+        uid,
+        profile.gamerTag,
+        profile.gameId || '',
+        profile.rank || '',
+        myParticipant
+      );
+      onSaveTicket(firestoreTicket);
+      onOpenTicket(firestoreTicket);
+      return;
+    }
     if (cachedTicket) {
       onOpenTicket(cachedTicket);
       return;
@@ -192,13 +349,35 @@ function TournamentCard({
     if (busy) return;
     setBusy(true);
     try {
-      const ticket = await requestBotTicket();
-      if (ticket) {
-        onSaveTicket(ticket);
-        onOpenTicket(ticket);
+      const ticket =
+        (await requestBotTicket(true)) ||
+        buildFallbackTicket(
+          tournament,
+          uid,
+          profile.gamerTag,
+          profile.gameId || '',
+          profile.rank || '',
+          myParticipant
+        );
+      // Persist missing room info cleanly into Firestore participant doc
+      if (joined) {
+        const pRef = doc(db, 'tournaments', tournament.id, 'participants', uid);
+        const rawTag = (profile.gamerTag || 'Player').trim().slice(0, 16);
+        const safeTag = rawTag.length >= 3 ? rawTag : `${rawTag}___`.slice(0, 3);
+        void setDoc(pRef, {
+          uid,
+          gamerTag: safeTag,
+          roomId: ticket.roomId.slice(0, 64),
+          roomCode: ticket.roomCode.slice(0, 64),
+          registrationCode: ticket.registrationCode.slice(0, 64),
+          matchTime: ticket.matchTime.slice(0, 80),
+          gameId: ticket.filledProfile.gameId.slice(0, 40),
+          rank: ticket.filledProfile.rank.slice(0, 40),
+          joinedAt: serverTimestamp(),
+        }).catch(() => {});
       }
-    } catch {
-      showToast(t.tournamentRegisterError);
+      onSaveTicket(ticket);
+      onOpenTicket(ticket);
     } finally {
       setBusy(false);
     }
@@ -212,22 +391,28 @@ function TournamentCard({
     }
 
     if (joined) {
+      if (!isLeaderRegistrant) {
+        void handleOpenPass();
+        return;
+      }
       setBusy(true);
       const pRef = doc(db, 'tournaments', tournament.id, 'participants', uid);
       try {
         await deleteDoc(pRef);
         setParticipants((prev) => prev.filter((p) => p.uid !== uid));
+        onRemoveTicket(tournament.id);
         showToast(t.tournamentUnregisteredToast);
       } catch (err) {
         showToast(t.tournamentRegisterError);
-        handleFirestoreError(
-          err,
-          OperationType.DELETE,
-          `tournaments/${tournament.id}/participants/${uid}`
-        );
+        console.error('Tournament unregister error:', err);
       } finally {
         setBusy(false);
       }
+      return;
+    }
+
+    if (isSquadTournament) {
+      onRequestSquadRegister(tournament);
       return;
     }
 
@@ -236,7 +421,7 @@ function TournamentCard({
     const pRef = doc(db, 'tournaments', tournament.id, 'participants', uid);
 
     try {
-      const ticket = await requestBotTicket();
+      const ticket = await requestBotTicket(false);
       if (!ticket) {
         setBusy(false);
         return;
@@ -247,9 +432,11 @@ function TournamentCard({
         const safeTitle = (tournament.title || 'Tournament').trim().slice(0, 80);
         const safeGame = (tournament.game || 'Game').trim().slice(0, 40);
         const safeDate = (tournament.dateLabel || '2026').trim().slice(0, 40);
+        const rawTag = (profile.gamerTag || 'Player').trim().slice(0, 16);
+        const safeTag = rawTag.length >= 3 ? rawTag : `${rawTag}___`.slice(0, 3);
         const baseDoc: Record<string, unknown> = {
           creatorUid: uid,
-          creatorTag: profile.gamerTag.slice(0, 16),
+          creatorTag: safeTag,
           title: safeTitle.length >= 3 ? safeTitle : `${safeTitle} Cup`,
           game: safeGame.length >= 2 ? safeGame : 'Gaming',
           dateLabel: safeDate.length >= 1 ? safeDate : 'TBD',
@@ -258,7 +445,7 @@ function TournamentCard({
           category,
           isBot: Boolean(tournament.isBot),
           officialSource: (tournament.officialSource || '').slice(0, 60),
-          imageUrl: coverUrl.slice(0, 500),
+          imageUrl: coverUrl.slice(0, 1000),
           visibility: 'public',
           createdAt: serverTimestamp(),
         };
@@ -267,7 +454,7 @@ function TournamentCard({
           (tournament.videoUrl.startsWith('https://') ||
             tournament.videoUrl.startsWith('/uploads/'))
         ) {
-          baseDoc.videoUrl = tournament.videoUrl.slice(0, 500);
+          baseDoc.videoUrl = tournament.videoUrl.slice(0, 1000);
         }
         if (tournament.sourceUrl && tournament.sourceUrl.startsWith('https://')) {
           baseDoc.sourceUrl = tournament.sourceUrl.slice(0, 500);
@@ -275,11 +462,20 @@ function TournamentCard({
         await setDoc(tRef, baseDoc);
       }
 
-      await setDoc(pRef, {
+      const rawTag = (profile.gamerTag || 'Player').trim().slice(0, 16);
+      const safeTag = rawTag.length >= 3 ? rawTag : `${rawTag}___`.slice(0, 3);
+      const participantPayload: TournamentParticipant = {
         uid,
-        gamerTag: profile.gamerTag.slice(0, 16),
+        gamerTag: safeTag,
+        roomId: ticket.roomId.slice(0, 64),
+        roomCode: ticket.roomCode.slice(0, 64),
+        registrationCode: ticket.registrationCode.slice(0, 64),
+        matchTime: ticket.matchTime.slice(0, 80),
+        gameId: ticket.filledProfile.gameId.slice(0, 40),
+        rank: ticket.filledProfile.rank.slice(0, 40),
         joinedAt: serverTimestamp(),
-      });
+      };
+      await setDoc(pRef, participantPayload);
 
       const rulesPreview = ticket.rules
         .slice(0, 3)
@@ -310,9 +506,7 @@ function TournamentCard({
       }
 
       setParticipants((prev) =>
-        prev.some((p) => p.uid === uid)
-          ? prev
-          : [...prev, { uid, gamerTag: profile.gamerTag }]
+        prev.some((p) => p.uid === uid) ? prev : [...prev, participantPayload]
       );
       onSaveTicket(ticket);
       onOpenTicket(ticket);
@@ -320,11 +514,7 @@ function TournamentCard({
       showToast(t.tournamentRegisteredToast);
     } catch (err) {
       showToast(t.tournamentRegisterError);
-      handleFirestoreError(
-        err,
-        OperationType.WRITE,
-        `tournaments/${tournament.id}/participants/${uid}`
-      );
+      console.error('Tournament register error:', err);
     } finally {
       setBusy(false);
     }
@@ -428,6 +618,18 @@ function TournamentCard({
               <BadgeIcon kind={flagsMap[tournament.creatorUid]?.badge} className="w-3.5 h-3.5" />
             </button>
           )}
+          {joined && myParticipant?.squadName && (
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-[11px] text-emerald-200 flex items-center justify-between gap-2">
+              <span className="font-bold truncate">
+                [{myParticipant.squadTag || 'SQD'}] {myParticipant.squadName}
+              </span>
+              {Array.isArray(myParticipant.selectedMembers) && (
+                <span className="text-emerald-300 font-semibold shrink-0 tabular-nums">
+                  {myParticipant.selectedMembers.length}/6
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -444,10 +646,14 @@ function TournamentCard({
             {busy ? (
               <span>{t.botRegisteringBtn}</span>
             ) : joined ? (
-              <span>{t.unregisterTournament}</span>
+              <span>{isLeaderRegistrant ? t.unregisterTournament : t.botPassBtn}</span>
             ) : (
               <>
-                <Bot className="w-4 h-4 shrink-0" />
+                {isSquadTournament ? (
+                  <Users className="w-4 h-4 shrink-0" />
+                ) : (
+                  <Bot className="w-4 h-4 shrink-0" />
+                )}
                 <span>{t.registerTournament}</span>
               </>
             )}
@@ -489,7 +695,7 @@ export function ArenaHubView({
   onOpenProfile,
   onOpenEditProfile,
 }: ArenaHubViewProps) {
-  const { firebaseUser, profile, flagsMap, blockedMap, lang, t, showToast, addXp } = useApp();
+  const { firebaseUser, profile, flagsMap, blockedMap, lang, t, showToast, addXp, isBanned } = useApp();
   const [tab, setTab] = useState<'tournaments' | 'lfg' | 'market'>('tournaments');
   const [tournamentCategory, setTournamentCategory] = useState<'all' | TournamentCategory>('all');
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -497,6 +703,13 @@ export function ArenaHubView({
   const [lfgList, setLfgList] = useState<LfgPost[]>([]);
   const [services, setServices] = useState<ServiceListing[]>([]);
   const [orders, setOrders] = useState<MarketOrder[]>([]);
+  const [ledSquads, setLedSquads] = useState<Squad[]>([]);
+  const [memberSquads, setMemberSquads] = useState<Squad[]>([]);
+
+  const [squadManagerOpen, setSquadManagerOpen] = useState(false);
+  const [pendingSquadTournament, setPendingSquadTournament] = useState<Tournament | null>(null);
+  const [squadLineupTournament, setSquadLineupTournament] = useState<Tournament | null>(null);
+  const [squadRegBusy, setSquadRegBusy] = useState(false);
 
   const [ticketsMap, setTicketsMap] = useState<Record<string, TournamentTicket>>({});
   const [activeTicket, setActiveTicket] = useState<TournamentTicket | null>(null);
@@ -522,6 +735,21 @@ export function ArenaHubView({
     if (!firebaseUser) return;
     setTicketsMap((prev) => {
       const next = { ...prev, [ticket.tournamentId]: ticket };
+      try {
+        localStorage.setItem(`sg_trn_tickets_${firebaseUser.uid}`, JSON.stringify(next));
+      } catch {
+        // ignore quota errors
+      }
+      return next;
+    });
+  };
+
+  const removeTicket = (tournamentId: string) => {
+    if (!firebaseUser) return;
+    setTicketsMap((prev) => {
+      if (!(tournamentId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tournamentId];
       try {
         localStorage.setItem(`sg_trn_tickets_${firebaseUser.uid}`, JSON.stringify(next));
       } catch {
@@ -570,7 +798,7 @@ export function ArenaHubView({
             .map((d) => ({ id: d.id, ...(d.data() as Omit<Tournament, 'id'>) }))
             .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
         ),
-      (err) => handleFirestoreError(err, OperationType.LIST, 'tournaments')
+      (err) => console.error('tournaments listener error:', err)
     );
 
     const unsubLfg = onSnapshot(
@@ -581,7 +809,7 @@ export function ArenaHubView({
             .map((d) => ({ id: d.id, ...(d.data() as Omit<LfgPost, 'id'>) }))
             .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
         ),
-      (err) => handleFirestoreError(err, OperationType.LIST, 'lfg')
+      (err) => console.error('lfg listener error:', err)
     );
 
     const unsubSrv = onSnapshot(
@@ -592,7 +820,7 @@ export function ArenaHubView({
             .map((d) => ({ id: d.id, ...(d.data() as Omit<ServiceListing, 'id'>) }))
             .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
         ),
-      (err) => handleFirestoreError(err, OperationType.LIST, 'services')
+      (err) => console.error('services listener error:', err)
     );
 
     const unsubBuyerOrders = onSnapshot(
@@ -607,7 +835,7 @@ export function ArenaHubView({
           return [...buyer, ...sellerOnly];
         });
       },
-      (err) => handleFirestoreError(err, OperationType.LIST, 'orders')
+      (err) => console.error('buyer orders listener error:', err)
     );
 
     const unsubSellerOrders = onSnapshot(
@@ -624,7 +852,31 @@ export function ArenaHubView({
           return Array.from(map.values());
         });
       },
-      (err) => handleFirestoreError(err, OperationType.LIST, 'orders')
+      (err) => console.error('seller orders listener error:', err)
+    );
+
+    const unsubLedSquads = onSnapshot(
+      query(collection(db, 'squads'), where('leaderUid', '==', uid)),
+      (snap) => {
+        setLedSquads(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<Squad, 'id'>) }))
+            .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
+        );
+      },
+      (err) => console.error('led squads listener error:', err)
+    );
+
+    const unsubMemberSquads = onSnapshot(
+      query(collection(db, 'squads'), where('memberUids', 'array-contains', uid)),
+      (snap) => {
+        setMemberSquads(
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<Squad, 'id'>) }))
+            .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
+        );
+      },
+      (err) => console.error('member squads listener error:', err)
     );
 
     return () => {
@@ -633,11 +885,198 @@ export function ArenaHubView({
       unsubSrv();
       unsubBuyerOrders();
       unsubSellerOrders();
+      unsubLedSquads();
+      unsubMemberSquads();
     };
   }, [firebaseUser]);
 
   if (!firebaseUser) return null;
   const uid = firebaseUser.uid;
+
+  const handleRequestSquadRegister = (tournament: Tournament) => {
+    if (isBanned) {
+      showToast(t.bannedAlert);
+      return;
+    }
+    if (ledSquads.length === 0) {
+      setPendingSquadTournament(tournament);
+      setSquadManagerOpen(true);
+      return;
+    }
+    setSquadLineupTournament(tournament);
+  };
+
+  const handleConfirmSquadLineup = async (
+    squad: Squad,
+    selectedMembers: SquadMemberEntry[]
+  ) => {
+    const tournament = squadLineupTournament;
+    if (!tournament || !profile || squadRegBusy) return;
+    if (selectedMembers.length === 0) {
+      showToast(t.squadPickAtLeastOne);
+      return;
+    }
+
+    setSquadRegBusy(true);
+    try {
+      const rawTag = (profile.gamerTag || 'Player').trim().slice(0, 16);
+      const safeTag = rawTag.length >= 3 ? rawTag : `${rawTag}___`.slice(0, 3);
+      const leaderEntry = selectedMembers[0] || squad.members[0];
+
+      let ticket: TournamentTicket | null = null;
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/tournaments/bot-register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            tournamentId: tournament.id,
+            title: tournament.title,
+            game: tournament.game,
+            mode: 'squad',
+            dateLabel: tournament.dateLabel,
+            officialSource: tournament.officialSource || 'Shaghaf Official Arena',
+            sourceUrl: tournament.sourceUrl || '',
+            gamerTag: safeTag,
+            gameId: leaderEntry?.gameId || profile.gameId || safeTag,
+            rank: leaderEntry?.rank || profile.rank || 'Competitor',
+            squadId: squad.id,
+            squadName: squad.name,
+            squadTag: squad.tag,
+            selectedMembers,
+          }),
+        });
+        if (res.ok) {
+          const payload = (await res.json()) as { ok?: boolean; ticket?: TournamentTicket };
+          if (payload.ok && payload.ticket) {
+            ticket = payload.ticket;
+          }
+        }
+      } catch {
+        // Fallback below
+      }
+
+      if (!ticket) {
+        ticket = buildFallbackTicket(
+          tournament,
+          uid,
+          safeTag,
+          leaderEntry?.gameId || profile.gameId || safeTag,
+          leaderEntry?.rank || profile.rank || 'Competitor',
+          {
+            uid,
+            gamerTag: safeTag,
+            squadId: squad.id,
+            squadName: squad.name,
+            squadTag: squad.tag,
+            selectedMembers,
+          }
+        );
+      }
+
+      const tRef = doc(db, 'tournaments', tournament.id);
+      const pRef = doc(db, 'tournaments', tournament.id, 'participants', uid);
+      const tSnap = await getDoc(tRef);
+      if (!tSnap.exists()) {
+        const safeTitle = (tournament.title || 'Tournament').trim().slice(0, 80);
+        const safeGame = (tournament.game || 'Game').trim().slice(0, 40);
+        const safeDate = (tournament.dateLabel || '2026').trim().slice(0, 40);
+        const coverUrl = tournament.imageUrl || getGameCoverImage(tournament.game);
+        const baseDoc: Record<string, unknown> = {
+          creatorUid: uid,
+          creatorTag: safeTag,
+          title: safeTitle.length >= 3 ? safeTitle : `${safeTitle} Cup`,
+          game: safeGame.length >= 2 ? safeGame : 'Gaming',
+          dateLabel: safeDate.length >= 1 ? safeDate : 'TBD',
+          prize: (tournament.prize || '').slice(0, 40),
+          mode: 'squad',
+          category: inferTournamentCategory(tournament),
+          isBot: Boolean(tournament.isBot),
+          officialSource: (tournament.officialSource || '').slice(0, 60),
+          imageUrl: coverUrl.slice(0, 1000),
+          visibility: 'public',
+          createdAt: serverTimestamp(),
+        };
+        if (
+          tournament.videoUrl &&
+          (tournament.videoUrl.startsWith('https://') ||
+            tournament.videoUrl.startsWith('/uploads/'))
+        ) {
+          baseDoc.videoUrl = tournament.videoUrl.slice(0, 1000);
+        }
+        if (tournament.sourceUrl && tournament.sourceUrl.startsWith('https://')) {
+          baseDoc.sourceUrl = tournament.sourceUrl.slice(0, 500);
+        }
+        await setDoc(tRef, baseDoc);
+      }
+
+      const participantDoc: TournamentParticipant = {
+        uid,
+        gamerTag: safeTag,
+        roomId: ticket.roomId.slice(0, 64),
+        roomCode: ticket.roomCode.slice(0, 64),
+        registrationCode: ticket.registrationCode.slice(0, 64),
+        matchTime: ticket.matchTime.slice(0, 80),
+        gameId: (leaderEntry?.gameId || profile.gameId || safeTag).slice(0, 40),
+        rank: (leaderEntry?.rank || profile.rank || 'Competitor').slice(0, 40),
+        squadId: squad.id.slice(0, 128),
+        squadName: squad.name.slice(0, 40),
+        squadTag: squad.tag.slice(0, 10),
+        selectedMembers: selectedMembers.slice(0, 6),
+        joinedAt: serverTimestamp(),
+      };
+      await setDoc(pRef, participantDoc);
+
+      const lineupLines = selectedMembers
+        .map((m, idx) => `${idx + 1}. ${m.gamerTag} (${m.gameId})`)
+        .join('\n');
+      const botBody = [
+        `[${squad.tag}] ${squad.name} → ${ticket.title}`,
+        `ID: ${ticket.roomId} | Code: ${ticket.roomCode}`,
+        `${t.entryCodeLabel}: ${ticket.registrationCode}`,
+        `${t.matchTimeLabel}: ${ticket.matchTime}`,
+        `${t.squadTicketRosterTitle}:\n${lineupLines}`,
+      ]
+        .join('\n')
+        .slice(0, 880);
+
+      // Dispatch ticket via Shaghaf Bot to Leader AND every selected member with a Shaghaf UID
+      const recipientUids = Array.from(
+        new Set([
+          uid,
+          ...selectedMembers.map((m) => m.uid).filter((id) => id && id.length > 0),
+        ])
+      );
+
+      await Promise.all(
+        recipientUids.map((targetUid) =>
+          addDoc(collection(db, 'bot_messages', targetUid, 'items'), {
+            targetUid,
+            squadId: squad.id,
+            title: `${t.botPassTitle}: [${squad.tag}] ${squad.name}`.slice(0, 80),
+            body: botBody,
+            kind: 'tournament',
+            read: targetUid === uid,
+            createdAt: serverTimestamp(),
+          }).catch(() => null)
+        )
+      );
+
+      saveTicket(ticket);
+      setSquadLineupTournament(null);
+      setActiveTicket(ticket);
+      void addXp(15);
+      showToast(t.squadRegisteredToast);
+    } catch (err) {
+      showToast(t.tournamentRegisterError);
+      console.error('Squad tournament registration error:', err);
+    } finally {
+      setSquadRegBusy(false);
+    }
+  };
 
   const updateOrderStatus = async (order: MarketOrder, status: 'delivered' | 'completed') => {
     try {
@@ -698,22 +1137,47 @@ export function ArenaHubView({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            onOpenCreate(tab === 'tournaments' ? 'tournament' : tab === 'lfg' ? 'lfg' : 'service')
-          }
-          className="min-h-[44px] px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 whitespace-nowrap shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>
-            {tab === 'tournaments'
-              ? t.createTournament
-              : tab === 'lfg'
-              ? t.createLfg
-              : t.createService}
-          </span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {tab === 'tournaments' && (
+            <button
+              type="button"
+              onClick={() => {
+                setPendingSquadTournament(null);
+                setSquadManagerOpen(true);
+              }}
+              className={`min-h-[44px] px-3.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors ${
+                ledSquads.length > 0
+                  ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30'
+                  : 'bg-[#12121D] border-violet-500/40 text-violet-300 hover:bg-violet-600/20'
+              }`}
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              <span>{t.manageSquadBtn}</span>
+              {ledSquads.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/25 text-[10px] font-black tabular-nums">
+                  {ledSquads.length}
+                </span>
+              )}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() =>
+              onOpenCreate(tab === 'tournaments' ? 'tournament' : tab === 'lfg' ? 'lfg' : 'service')
+            }
+            className="min-h-[44px] px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 whitespace-nowrap shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>
+              {tab === 'tournaments'
+                ? t.createTournament
+                : tab === 'lfg'
+                ? t.createLfg
+                : t.createService}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Tournaments */}
@@ -814,10 +1278,12 @@ export function ArenaHubView({
                           cachedTicket={ticketsMap[trn.id]}
                           onOpenProfile={onOpenProfile}
                           onSaveTicket={saveTicket}
+                          onRemoveTicket={removeTicket}
                           onOpenTicket={setActiveTicket}
                           onIncompleteProfile={(missingFields, tournamentTitle) =>
                             setIncompleteModal({ missingFields, tournamentTitle })
                           }
+                          onRequestSquadRegister={handleRequestSquadRegister}
                         />
                       ))}
                     </div>
@@ -838,10 +1304,12 @@ export function ArenaHubView({
                           cachedTicket={ticketsMap[trn.id]}
                           onOpenProfile={onOpenProfile}
                           onSaveTicket={saveTicket}
+                          onRemoveTicket={removeTicket}
                           onOpenTicket={setActiveTicket}
                           onIncompleteProfile={(missingFields, tournamentTitle) =>
                             setIncompleteModal({ missingFields, tournamentTitle })
                           }
+                          onRequestSquadRegister={handleRequestSquadRegister}
                         />
                       ))}
                     </div>
@@ -1153,22 +1621,56 @@ export function ArenaHubView({
                   <span>{t.botPassOfficialFilled}</span>
                 </div>
                 <div className="text-sm font-black text-white">{activeTicket.title}</div>
-                <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
-                  <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
-                    <div className="text-slate-400">{t.gamerTag}</div>
-                    <div className="font-bold text-white truncate">{activeTicket.filledProfile.gamerTag}</div>
-                  </div>
-                  <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
-                    <div className="text-slate-400">{t.gameId}</div>
-                    <div className="font-bold text-white truncate tabular-nums">
-                      {activeTicket.filledProfile.gameId}
+                {activeTicket.squad ? (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-black text-amber-300">
+                        [{activeTicket.squad.tag}] {activeTicket.squad.name}
+                      </span>
+                      <span className="text-[11px] text-emerald-300 font-semibold">
+                        ✓ {t.squadNotifiedBadge}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 font-bold">
+                      {t.squadTicketRosterTitle} ({activeTicket.squad.selectedMembers.length}/6):
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                      {activeTicket.squad.selectedMembers.map((m) => (
+                        <div
+                          key={m.slot}
+                          className="rounded-lg bg-black/30 px-2.5 py-1.5 flex items-center justify-between gap-2"
+                        >
+                          <span className="font-bold text-white flex items-center gap-1 truncate">
+                            {m.role === 'leader' && (
+                              <Crown className="w-3 h-3 text-amber-400 shrink-0" />
+                            )}
+                            <span className="truncate">{m.gamerTag}</span>
+                          </span>
+                          <span className="text-slate-300 truncate shrink-0">
+                            {m.gameId} · {m.rank}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
-                    <div className="text-slate-400">{t.rank}</div>
-                    <div className="font-bold text-amber-300 truncate">{activeTicket.filledProfile.rank}</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
+                    <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
+                      <div className="text-slate-400">{t.gamerTag}</div>
+                      <div className="font-bold text-white truncate">{activeTicket.filledProfile.gamerTag}</div>
+                    </div>
+                    <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
+                      <div className="text-slate-400">{t.gameId}</div>
+                      <div className="font-bold text-white truncate tabular-nums">
+                        {activeTicket.filledProfile.gameId}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
+                      <div className="text-slate-400">{t.rank}</div>
+                      <div className="font-bold text-amber-300 truncate">{activeTicket.filledProfile.rank}</div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Room ID & Room Code (Copyable) */}
@@ -1286,6 +1788,43 @@ export function ArenaHubView({
           </div>
         </div>
       )}
+
+      {/* 6-Player Squad Manager Modal */}
+      <SquadManagerModal
+        open={squadManagerOpen}
+        ledSquads={ledSquads}
+        memberSquads={memberSquads}
+        defaultGame={pendingSquadTournament?.game}
+        pendingTournamentTitle={pendingSquadTournament?.title}
+        onClose={() => {
+          setSquadManagerOpen(false);
+          setPendingSquadTournament(null);
+        }}
+        onSquadReady={(createdSquad) => {
+          setLedSquads((prev) =>
+            prev.some((s) => s.id === createdSquad.id) ? prev : [createdSquad, ...prev]
+          );
+          setSquadManagerOpen(false);
+          if (pendingSquadTournament) {
+            setSquadLineupTournament(pendingSquadTournament);
+            setPendingSquadTournament(null);
+          }
+        }}
+      />
+
+      {/* Squad Leader Participant Lineup Selector Modal */}
+      <SquadLineupModal
+        tournament={squadLineupTournament}
+        ledSquads={ledSquads}
+        busy={squadRegBusy}
+        onClose={() => setSquadLineupTournament(null)}
+        onManageSquads={() => {
+          setPendingSquadTournament(squadLineupTournament);
+          setSquadLineupTournament(null);
+          setSquadManagerOpen(true);
+        }}
+        onConfirm={handleConfirmSquadLineup}
+      />
     </div>
   );
 }

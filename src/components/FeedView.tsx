@@ -6,7 +6,6 @@ import {
   doc,
   limit,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -64,27 +63,50 @@ function PostCard({
   onOpenUserOptions: (uid: string, tag: string) => void;
   onSelectHashtag: (tag: string) => void;
 }) {
-  const { firebaseUser, profile, flagsMap, friendsMap, blockedMap, isOwner, lang, t, showToast, checkTextModeration, addXp } =
-    useApp();
+  const {
+    firebaseUser,
+    profile,
+    flagsMap,
+    friendsMap,
+    blockedMap,
+    isOwner,
+    isBanned,
+    lang,
+    t,
+    showToast,
+    checkTextModeration,
+    addXp,
+  } = useApp();
   const [likes, setLikes] = useState<string[]>([]);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [likingBusy, setLikingBusy] = useState(false);
+  const [commentBusy, setCommentBusy] = useState(false);
   const [zoomImage, setZoomImage] = useState(false);
 
+  const commentTsMs = (v: unknown) => {
+    const obj = v as { toMillis?: () => number } | undefined;
+    return typeof obj?.toMillis === 'function' ? obj.toMillis() : Date.now();
+  };
+
   useEffect(() => {
+    setLikes([]);
+    setComments([]);
     const unsubLikes = onSnapshot(
       collection(db, 'posts', post.id, 'likes'),
       (snap) => setLikes(snap.docs.map((d) => d.id)),
-      (err) => handleFirestoreError(err, OperationType.LIST, `posts/${post.id}/likes`)
+      (err) => console.error('post likes listener error:', err)
     );
     const unsubComments = onSnapshot(
-      query(collection(db, 'posts', post.id, 'comments'), orderBy('createdAt', 'asc'), limit(40)),
+      query(collection(db, 'posts', post.id, 'comments'), limit(100)),
       (snap) =>
         setComments(
-          snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostComment, 'id'>) }))
+          snap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Omit<PostComment, 'id'>) }))
+            .sort((a, b) => commentTsMs(a.createdAt) - commentTsMs(b.createdAt))
         ),
-      (err) => handleFirestoreError(err, OperationType.LIST, `posts/${post.id}/comments`)
+      (err) => console.error('post comments listener error:', err)
     );
     return () => {
       unsubLikes();
@@ -102,7 +124,12 @@ function PostCard({
   const ringColor = friend ? TIER_META[friend.tier].ringColor : undefined;
 
   const toggleLike = async () => {
-    const likePath = `posts/${post.id}/likes/${uid}`;
+    if (likingBusy) return;
+    if (isBanned && !isOwner) {
+      showToast(t.bannedAlert);
+      return;
+    }
+    setLikingBusy(true);
     try {
       if (isLiked) {
         await deleteDoc(doc(db, 'posts', post.id, 'likes', uid));
@@ -113,27 +140,53 @@ function PostCard({
         });
       }
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, likePath);
+      console.error('toggleLike error:', err);
+      showToast(
+        lang === 'ar'
+          ? 'تعذر تسجيل الإعجاب، تحقق من الاتصال أو التوثيق'
+          : 'Could not update like, please try again'
+      );
+    } finally {
+      setLikingBusy(false);
     }
   };
 
   const handleCommentSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    if (commentBusy) return;
+    if (!profile) {
+      showToast(
+        lang === 'ar' ? 'أكمل ملفك الشخصي أولًا للتعليق' : 'Please complete your profile to comment'
+      );
+      return;
+    }
     const text = commentText.trim();
     if (!text) return;
     if (!checkTextModeration(text)) return;
+
+    const rawTag = (profile.gamerTag || firebaseUser.displayName || 'Player').trim().slice(0, 16);
+    const safeTag = rawTag.length >= 3 ? rawTag : `${rawTag}___`.slice(0, 3);
+
+    setCommentBusy(true);
+    setShowComments(true);
     try {
       await addDoc(collection(db, 'posts', post.id, 'comments'), {
         authorUid: uid,
-        authorTag: profile.gamerTag,
+        authorTag: safeTag,
         text: text.slice(0, LIMITS.COMMENT_MAX),
         createdAt: serverTimestamp(),
       });
       setCommentText('');
-      addXp(2);
+      void addXp(2);
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, `posts/${post.id}/comments`);
+      console.error('handleCommentSubmit error:', err);
+      showToast(
+        lang === 'ar'
+          ? 'تعذر إرسال التعليق، تحقق من اتصال الإنترنت أو الصلاحية'
+          : 'Could not post comment, please try again'
+      );
+    } finally {
+      setCommentBusy(false);
     }
   };
 
@@ -141,6 +194,7 @@ function PostCard({
     try {
       await deleteDoc(doc(db, 'posts', post.id));
     } catch (err) {
+      showToast(lang === 'ar' ? 'تعذر حذف المنشور' : 'Could not delete post');
       handleFirestoreError(err, OperationType.DELETE, `posts/${post.id}`);
     }
   };
@@ -342,34 +396,42 @@ function PostCard({
       {/* Comments Drawer */}
       {showComments && (
         <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-3">
-          {comments
-            .filter((c) => !blockedMap[c.authorUid])
-            .map((c) => (
-              <div key={c.id} className="flex items-start justify-between gap-2 text-xs">
-                <div className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => onOpenProfile(c.authorUid, c.authorTag)}
-                    className="font-bold text-slate-200 hover:underline me-1.5"
-                  >
-                    {c.authorTag}
-                  </button>
-                  <span className="text-slate-300 break-words">{c.text}</span>
+          {comments.filter((c) => !blockedMap[c.authorUid]).length === 0 ? (
+            <p className="text-xs text-slate-400">
+              {lang === 'ar'
+                ? 'لا توجد تعليقات بعد — كن أول من يعلق!'
+                : 'No comments yet — be the first to reply!'}
+            </p>
+          ) : (
+            comments
+              .filter((c) => !blockedMap[c.authorUid])
+              .map((c) => (
+                <div key={c.id} className="flex items-start justify-between gap-2 text-xs">
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(c.authorUid, c.authorTag)}
+                      className="font-bold text-slate-200 hover:underline me-1.5"
+                    >
+                      {c.authorTag}
+                    </button>
+                    <span className="text-slate-300 break-words">{c.text}</span>
+                  </div>
+                  {(c.authorUid === uid || isOwner) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        deleteDoc(doc(db, 'posts', post.id, 'comments', c.id)).catch(() => {})
+                      }
+                      className="text-slate-500 hover:text-rose-400 px-1.5 py-1"
+                      aria-label="Delete comment"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
-                {(c.authorUid === uid || isOwner) && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      deleteDoc(doc(db, 'posts', post.id, 'comments', c.id)).catch(() => {})
-                    }
-                    className="text-slate-500 hover:text-rose-400 px-1.5 py-1"
-                    aria-label="Delete comment"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
+              ))
+          )}
 
           <form onSubmit={handleCommentSubmit} className="flex items-center gap-2">
             <input
@@ -382,8 +444,9 @@ function PostCard({
             />
             <button
               type="submit"
+              disabled={commentBusy || !commentText.trim()}
               aria-label={t.send}
-              className="min-h-[44px] min-w-[44px] rounded-xl bg-violet-600 hover:bg-violet-500 text-white grid place-items-center shrink-0"
+              className="min-h-[44px] min-w-[44px] rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white grid place-items-center shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -425,10 +488,10 @@ export function FeedView({
           .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt));
         setPosts(list);
         list.forEach((p) => {
-          void enforceExistingModeration('post', p.id, p.authorUid, p.authorTag, p.content);
+          void enforceExistingModeration('post', p.id, p.authorUid, p.authorTag, p.content, p.server);
         });
       },
-      (err) => handleFirestoreError(err, OperationType.LIST, 'posts')
+      (err) => console.error('posts listener error:', err)
     );
 
     const unsubStories = onSnapshot(
@@ -442,7 +505,7 @@ export function FeedView({
             .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
         );
       },
-      (err) => handleFirestoreError(err, OperationType.LIST, 'stories')
+      (err) => console.error('stories listener error:', err)
     );
 
     return () => {

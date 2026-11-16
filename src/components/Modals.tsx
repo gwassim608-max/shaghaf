@@ -312,7 +312,7 @@ export function Modals({
     const text = postContent.trim();
     if (!text && !postImageFile && !postMemeUrl) return;
     if (!checkTextModeration(text, 'post')) return;
-    const ok = await moderateSubmission('post', text, postImageFile?.name || '');
+    const ok = await moderateSubmission('post', text, postImageFile?.name || '', postServer);
     if (!ok) {
       onClose();
       return;
@@ -335,7 +335,7 @@ export function Modals({
         updatedAt: serverTimestamp(),
       };
       if (uploadedImageUrl) {
-        postPayload.imageUrl = uploadedImageUrl;
+        postPayload.imageUrl = uploadedImageUrl.slice(0, 1000);
       }
       if (tags.length > 0) {
         postPayload.hashtags = tags;
@@ -368,7 +368,7 @@ export function Modals({
     const title = videoTitle.trim();
     if (!title) return;
     if (!checkTextModeration(title, 'post')) return;
-    const ok = await moderateSubmission('video', title, videoFile?.name || '');
+    const ok = await moderateSubmission('video', title, videoFile?.name || '', postServer);
     if (!ok) {
       onClose();
       return;
@@ -396,7 +396,7 @@ export function Modals({
         authorTag: profile.gamerTag,
         server: postServer,
         title: title.slice(0, 140),
-        videoUrl: finalUrl.slice(0, 500),
+        videoUrl: finalUrl.slice(0, 1000),
         visibility: 'public',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -524,7 +524,7 @@ export function Modals({
           prize: f4.trim().slice(0, 40),
           mode: trnMode,
           category: trnCategory,
-          imageUrl: coverImage,
+          imageUrl: coverImage.slice(0, 1000),
           visibility: 'public',
           createdAt: serverTimestamp(),
         });
@@ -561,8 +561,15 @@ export function Modals({
       showToast(lang === 'ar' ? 'تم النشر بنجاح!' : 'Published!');
       onClose();
     } catch (err) {
-      showToast(lang === 'ar' ? 'تعذر النشر' : 'Failed to publish');
-      handleFirestoreError(err, OperationType.CREATE, kind);
+      const msg = err instanceof Error ? err.message : '';
+      if (msg === 'FILE_TOO_LARGE_IMAGE') {
+        showToast(t.fileTooLargeImage);
+      } else if (msg.startsWith('UPLOAD_')) {
+        showToast(t.uploadFailed);
+      } else {
+        showToast(lang === 'ar' ? 'تعذر النشر' : 'Failed to publish');
+        handleFirestoreError(err, OperationType.CREATE, kind);
+      }
     } finally {
       setBusy(false);
       setUploadProgress(0);

@@ -217,7 +217,7 @@ function VideoCard({
     const unsub = onSnapshot(
       collection(db, 'videos', video.id, 'likes'),
       (snap) => setLikes(snap.docs.map((d) => d.id)),
-      (err) => handleFirestoreError(err, OperationType.LIST, `videos/${video.id}/likes`)
+      (err) => console.error('video likes listener error:', err)
     );
     return () => unsub();
   }, [video.id]);
@@ -234,7 +234,6 @@ function VideoCard({
   const ringColor = friend ? TIER_META[friend.tier].ringColor : undefined;
 
   const toggleLike = async () => {
-    const likePath = `videos/${video.id}/likes/${uid}`;
     try {
       if (isLiked) {
         await deleteDoc(doc(db, 'videos', video.id, 'likes', uid));
@@ -245,7 +244,8 @@ function VideoCard({
         });
       }
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, likePath);
+      console.error('video toggleLike error:', err);
+      showToast(lang === 'ar' ? 'تعذر تسجيل الإعجاب، حاول مجددًا' : 'Could not update like');
     }
   };
 
@@ -482,10 +482,10 @@ export function VideosView({
           .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt));
         setVideos(list);
         list.forEach((v) => {
-          void enforceExistingModeration('video', v.id, v.authorUid, v.authorTag, v.title);
+          void enforceExistingModeration('video', v.id, v.authorUid, v.authorTag, v.title, v.server);
         });
       },
-      (err) => handleFirestoreError(err, OperationType.LIST, 'videos')
+      (err) => console.error('videos listener error:', err)
     );
     return () => unsub();
   }, [enforceExistingModeration]);

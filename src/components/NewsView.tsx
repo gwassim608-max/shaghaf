@@ -23,18 +23,19 @@ interface NewsViewProps {
 
 const NEWS_GAMES = [
   'ALL',
-  'THE FINALS',
   'Free Fire',
   'PUBG Mobile',
-  'Valorant',
-  'Fortnite',
+  'THE FINALS',
   'Warzone',
+  'Fortnite',
+  'Valorant',
   'Apex Legends',
+  'Call of Duty',
   'CS2',
-  'EA FC',
-  'Rocket League',
   'League of Legends',
+  'Rocket League',
   'Mobile Legends',
+  'EA FC',
 ];
 
 export function NewsView({ onOpenArena }: NewsViewProps) {
@@ -73,6 +74,10 @@ export function NewsView({ onOpenArena }: NewsViewProps) {
 
   useEffect(() => {
     void loadNews(false);
+    const timer = setInterval(() => {
+      void loadNews(false);
+    }, 3 * 60_000);
+    return () => clearInterval(timer);
   }, [loadNews, newsRefreshTick]);
 
   const formatTimeAgo = (ms: number) => {

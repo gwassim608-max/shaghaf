@@ -30,6 +30,10 @@ const IMAGE_MIME_EXT: Record<string, string> = {
   'image/png': 'png',
   'image/webp': 'webp',
   'image/gif': 'gif',
+  'image/bmp': 'bmp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'image/avif': 'avif',
 };
 
 const VIDEO_MIME_EXT: Record<string, string> = {
@@ -135,11 +139,14 @@ function isValidMediaSignature(buf: Buffer, kind: 'image' | 'video'): boolean {
     const isJpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
     const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
     const isGif = buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38;
+    const isBmp = buf[0] === 0x42 && buf[1] === 0x4d;
     const isWebp =
       buf.length >= 12 &&
       buf.subarray(0, 4).toString('ascii') === 'RIFF' &&
       buf.subarray(8, 12).toString('ascii') === 'WEBP';
-    return isJpeg || isPng || isGif || isWebp;
+    const isHeifAvif =
+      buf.length >= 12 && buf.subarray(4, 8).toString('ascii') === 'ftyp';
+    return isJpeg || isPng || isGif || isBmp || isWebp || isHeifAvif;
   }
   const isFtyp = buf.length >= 8 && buf.subarray(4, 8).toString('ascii') === 'ftyp'; // MP4/MOV/M4V/3GP
   const isQtMoov =
@@ -635,14 +642,121 @@ export interface NewsItem {
   isLiveSteam?: boolean;
 }
 
+const APP_NEWS_GAMES = [
+  'Free Fire',
+  'PUBG Mobile',
+  'THE FINALS',
+  'Warzone',
+  'Fortnite',
+  'Valorant',
+  'Apex Legends',
+  'Call of Duty',
+  'CS2',
+  'League of Legends',
+  'Rocket League',
+  'Mobile Legends',
+  'EA FC',
+] as const;
+
+const APP_NEWS_GAMES_SET = new Set<string>(APP_NEWS_GAMES);
+
 const STEAM_APP_FEEDS: Array<{ appId: number; game: string; imageUrl: string; sourceName: string }> = [
   { appId: 2073850, game: 'THE FINALS', imageUrl: '/backgrounds/the_finals.jpg', sourceName: 'Steam · Embark Studios' },
   { appId: 730, game: 'CS2', imageUrl: '/api/server-bg/CS2.svg', sourceName: 'Steam · Valve CS2' },
   { appId: 578080, game: 'PUBG Mobile', imageUrl: '/backgrounds/pubg_mobile.jpg', sourceName: 'Steam · Krafton PUBG' },
   { appId: 1172470, game: 'Apex Legends', imageUrl: '/api/server-bg/APEX.svg', sourceName: 'Steam · Respawn' },
-  { appId: 1938090, game: 'Warzone', imageUrl: '/backgrounds/warzone_fortnite.jpg', sourceName: 'Steam · Call of Duty' },
+  { appId: 1938090, game: 'Call of Duty', imageUrl: '/backgrounds/warzone_fortnite.jpg', sourceName: 'Steam · Call of Duty' },
   { appId: 2669320, game: 'EA FC', imageUrl: '/api/server-bg/EAFC.svg', sourceName: 'Steam · EA Sports FC' },
+  { appId: 252950, game: 'Rocket League', imageUrl: '/api/server-bg/RL.svg', sourceName: 'Steam · Psyonix RL' },
 ];
+
+const GAMING_RSS_FEEDS: Array<{ url: string; sourceName: string }> = [
+  { url: 'https://esportsinsider.com/feed', sourceName: 'Esports Insider' },
+  { url: 'https://www.dexerto.com/feed/', sourceName: 'Dexerto Gaming' },
+  { url: 'https://dotesports.com/feed', sourceName: 'Dot Esports' },
+  { url: 'https://www.pcgamer.com/rss/', sourceName: 'PC Gamer' },
+  { url: 'https://feeds.feedburner.com/ign/games-all', sourceName: 'IGN Games' },
+];
+
+function decodeXmlEntities(raw: string): string {
+  return raw
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_m, n) => String.fromCharCode(Number(n) || 32));
+}
+
+function extractXmlTag(block: string, tag: string): string {
+  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i');
+  const m = block.match(re);
+  return m?.[1] ? decodeXmlEntities(m[1]).trim() : '';
+}
+
+function inferNewsGame(text: string): string | null {
+  const low = text.toLowerCase();
+  if (/the finals|embark studios/.test(low)) return 'THE FINALS';
+  if (/free fire|freefire|garena free fire|booyah\b/.test(low)) return 'Free Fire';
+  if (/pubg|pmco|pmgc|erangel|krafton pubg/.test(low)) return 'PUBG Mobile';
+  if (/valorant|vct\b/.test(low)) return 'Valorant';
+  if (/fortnite|fncs|battle bus/.test(low)) return 'Fortnite';
+  if (/\bwarzone\b|verdansk|rebirth island|resurgence/.test(low)) return 'Warzone';
+  if (/call of duty|cod mobile|\bcodm\b|black ops|modern warfare|nuketown/.test(low)) return 'Call of Duty';
+  if (/apex legends|\balgs\b/.test(low)) return 'Apex Legends';
+  if (/counter-strike|\bcs2\b|cs:go|\bcsgo\b/.test(low)) return 'CS2';
+  if (/ea fc|ea sports fc|fc 25|fc 26|\bfifa\b/.test(low)) return 'EA FC';
+  if (/rocket league|\brlcs\b/.test(low)) return 'Rocket League';
+  if (/league of legends|\blol worlds\b|\blcs\b|\blec\b|\blck\b/.test(low)) return 'League of Legends';
+  if (/mobile legends|\bmlbb\b|\bmpl\b/.test(low)) return 'Mobile Legends';
+  return null;
+}
+
+function parseRssFeedItems(xml: string, sourceName: string): NewsItem[] {
+  const results: NewsItem[] = [];
+  const itemMatches = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
+  for (const rawItem of itemMatches.slice(0, 12)) {
+    const title = extractXmlTag(rawItem, 'title').replace(/<[^>]+>/g, '').trim();
+    if (!title) continue;
+    let link = extractXmlTag(rawItem, 'link').trim();
+    if (link.startsWith('http://')) link = link.replace(/^http:\/\//i, 'https://');
+    if (!link.startsWith('https://')) continue;
+
+    const descRaw = extractXmlTag(rawItem, 'content:encoded') || extractXmlTag(rawItem, 'description');
+    const summary = stripBbCodeAndHtml(descRaw) || title;
+    const game = inferNewsGame(`${title} ${summary}`);
+    // Strictly publish ONLY news about games inside Shaghaf app
+    if (!game || !APP_NEWS_GAMES_SET.has(game)) continue;
+
+    const pubDateStr = extractXmlTag(rawItem, 'pubDate');
+    const parsedTs = pubDateStr ? Date.parse(pubDateStr) : NaN;
+    const publishedAtMs = Number.isFinite(parsedTs) && parsedTs > 0 ? parsedTs : Date.now();
+
+    const mediaMatch =
+      rawItem.match(/<(?:media:content|media:thumbnail|enclosure)[^>]+url=["'](https:\/\/[^"'\s<>]+)["']/i) ||
+      descRaw.match(/<img[^>]+src=["'](https:\/\/[^"'\s<>]+)["']/i);
+
+    const lowerAll = `${title} ${summary} ${sourceName}`.toLowerCase();
+    const isTournament = /tournament|championship|esports|major|cup|qualifier|finals|worlds|rlcs|vct|fncs|بطول|تصفيات/.test(
+      lowerAll
+    );
+    const id = `rss_${hashString(link).toString(36)}`;
+    results.push({
+      id,
+      game,
+      category: isTournament ? 'tournament' : 'update',
+      title: title.slice(0, 140),
+      summary: summary.slice(0, 260),
+      imageUrl: mediaMatch?.[1] || `/api/news-art/${encodeURIComponent(id)}.svg`,
+      sourceName,
+      sourceUrl: link,
+      publishedAtMs,
+      isLiveSteam: true,
+    });
+  }
+  return results;
+}
 
 function stripBbCodeAndHtml(raw: string): string {
   return raw
@@ -747,8 +861,10 @@ function assignUniqueNewsImages(items: NewsItem[]): NewsItem[] {
   });
 }
 
+const CURATED_NEWS_BASE_MS = Date.parse('2026-11-12T12:00:00Z');
+
 function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsItem[] {
-  const baseMs = Date.now();
+  const baseMs = CURATED_NEWS_BASE_MS;
   return [
     {
       id: 'cur_tf_major_update',
@@ -760,7 +876,7 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       videoUrl: trailers['THE FINALS'],
       sourceName: 'THE FINALS Official',
       sourceUrl: 'https://www.reachthefinals.com/esports',
-      publishedAtMs: baseMs - 25 * 60_000,
+      publishedAtMs: baseMs - 4 * 3600_000,
     },
     {
       id: 'cur_ff_ob_update',
@@ -771,7 +887,7 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       imageUrl: '/backgrounds/free_fire.jpg',
       sourceName: 'Free Fire Official',
       sourceUrl: 'https://ff.garena.com/news/',
-      publishedAtMs: baseMs - 65 * 60_000,
+      publishedAtMs: baseMs - 6 * 3600_000,
     },
     {
       id: 'cur_pubgm_pmco',
@@ -783,7 +899,7 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       videoUrl: trailers['PUBG Mobile'],
       sourceName: 'PUBG Mobile Esports',
       sourceUrl: 'https://esports.pubgmobile.com/',
-      publishedAtMs: baseMs - 110 * 60_000,
+      publishedAtMs: baseMs - 8 * 3600_000,
     },
     {
       id: 'cur_val_vct',
@@ -794,7 +910,7 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       imageUrl: '/backgrounds/valorant.jpg',
       sourceName: 'Valorant Esports',
       sourceUrl: 'https://valorantesports.com/',
-      publishedAtMs: baseMs - 160 * 60_000,
+      publishedAtMs: baseMs - 10 * 3600_000,
     },
     {
       id: 'cur_fn_fncs',
@@ -805,7 +921,19 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       imageUrl: '/backgrounds/warzone_fortnite.jpg',
       sourceName: 'Fortnite Competitive',
       sourceUrl: 'https://www.fortnite.com/competitive',
-      publishedAtMs: baseMs - 210 * 60_000,
+      publishedAtMs: baseMs - 12 * 3600_000,
+    },
+    {
+      id: 'cur_cod_hq',
+      game: 'Call of Duty',
+      category: 'update',
+      title: 'تحديثات Call of Duty الموسمية وجدول بطولات CDL الرسمية',
+      summary: 'ملاحظات التحديث الرسمية للأسلحة والخرائط التنافسية ومواعيد بطولات Call of Duty League وCOD Mobile.',
+      imageUrl: '/backgrounds/warzone_fortnite.jpg',
+      videoUrl: trailers['Warzone'],
+      sourceName: 'Call of Duty Official',
+      sourceUrl: 'https://www.callofduty.com/blog',
+      publishedAtMs: baseMs - 14 * 3600_000,
     },
     {
       id: 'cur_rl_rlcs',
@@ -817,7 +945,7 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       videoUrl: trailers['Rocket League'],
       sourceName: 'Rocket League Esports',
       sourceUrl: 'https://esports.rocketleague.com/',
-      publishedAtMs: baseMs - 260 * 60_000,
+      publishedAtMs: baseMs - 16 * 3600_000,
     },
     {
       id: 'cur_lol_patch',
@@ -828,7 +956,7 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       imageUrl: '/api/server-bg/LOL.svg',
       sourceName: 'LoL Esports',
       sourceUrl: 'https://lolesports.com/',
-      publishedAtMs: baseMs - 320 * 60_000,
+      publishedAtMs: baseMs - 18 * 3600_000,
     },
     {
       id: 'cur_mlbb_mpl',
@@ -839,19 +967,23 @@ function buildCuratedOfficialNews(trailers: Record<string, string> = {}): NewsIt
       imageUrl: '/api/server-bg/ML.svg',
       sourceName: 'MLBB Official',
       sourceUrl: 'https://m.mobilelegends.com/',
-      publishedAtMs: baseMs - 390 * 60_000,
+      publishedAtMs: baseMs - 20 * 3600_000,
     },
   ];
 }
 
-function detectServerViolation(text: string): { violated: boolean; kind: 'none' | 'profanity' | 'nsfw'; reason: string } {
-  const normalized = text
+function normalizeServerModText(raw: string): string {
+  return raw
     .toLowerCase()
     .replace(/[\u064B-\u065F\u0640]/g, '')
     .replace(/[أإآ]/g, 'ا')
     .replace(/ى/g, 'ي')
     .replace(/ة/g, 'ه')
     .replace(/(.)\1+/g, '$1');
+}
+
+function detectServerViolation(text: string): { violated: boolean; kind: 'none' | 'profanity' | 'nsfw'; reason: string } {
+  const normalized = normalizeServerModText(text);
   const tokens = normalized.split(/[^a-z0-9\u0621-\u064A]+/g);
   const compact = normalized.replace(/[^a-z0-9\u0621-\u064A]+/g, '');
   const nsfwList = ['سكس', 'اباحي', 'بورن', 'عاري', 'عاريه', 'عري', 'porn', 'xxx', 'nsfw', 'nude', 'nudes', 'hentai', 'onlyfans', 'sex', 'boobs', 'dick', 'pussy', 'pornhub', 'xvideos'];
@@ -863,6 +995,143 @@ function detectServerViolation(text: string): { violated: boolean; kind: 'none' 
     return { violated: true, kind: 'profanity', reason: 'ألفاظ مسيئة أو سبّ مخالف لقوانين شغف' };
   }
   return { violated: false, kind: 'none', reason: '' };
+}
+
+const SERVER_OPEN_SET = new Set(['ALL', 'FOR_YOU', 'Clans & LFG', 'MENA', 'Global', '']);
+const SERVER_TOPIC_TERMS: Record<string, string[]> = {
+  'Free Fire': ['free fire', 'freefire', 'ff', 'garena', 'فري فاير', 'فريفاير', 'كارينا', 'booyah', 'بويا', 'بوياه', 'bermuda', 'برمودا', 'clash squad', 'كلاش سكواد', 'alok', 'الوك', 'lone wolf', 'diamonds', 'جواهر', 'ون تاب', 'هيدشوت', 'رومات فري'],
+  'PUBG Mobile': ['pubg', 'pubgm', 'ببجي', 'بابجي', 'erangel', 'ارنغل', 'livik', 'ليفيك', 'pmco', 'pmgc', 'uc', 'شدات', 'conqueror', 'كونكر', 'chicken dinner', 'm416'],
+  'THE FINALS': ['the finals', 'ذا فاينلز', 'فاينلز', 'embark', 'cashout', 'كاش اوت', 'world tour', 'multibucks', 'ospuze'],
+  Warzone: ['warzone', 'وارزون', 'verdansk', 'rebirth', 'gulag', 'loadout', 'resurgence', 'cod points'],
+  Fortnite: ['fortnite', 'فورتنايت', 'فورت نايت', 'vbucks', 'v-bucks', 'zero build', 'battle bus', 'fncs', 'victory cup', 'epic games'],
+  Valorant: ['valorant', 'فالورانت', 'vct', 'riot', 'spike', 'radiant', 'jett', 'reyna', 'vandal', 'phantom', 'premier'],
+  'Apex Legends': ['apex', 'apex legends', 'ابيكس', 'أبيكس', 'algs', 'wraith', 'octane', 'heirloom', 'respawn'],
+  'Call of Duty': ['call of duty', 'cod', 'codm', 'كول اوف ديوتي', 'كود موبايل', 'nuketown', 'bo6', 'mw3', 'black ops', 'modern warfare'],
+  CS2: ['cs2', 'csgo', 'counter strike', 'counter-strike', 'كونتر سترايك', 'dust2', 'mirage', 'awp', 'faceit', 'valve'],
+  'League of Legends': ['league of legends', 'lol', 'ليج اوف ليجندز', 'لول', 'summoner', 'worlds', 'yasuo', 'faker', 'tft'],
+  'Rocket League': ['rocket league', 'روكت ليق', 'روكت ليج', 'rlcs', 'flip reset', 'fennec', 'dominus'],
+  'Mobile Legends': ['mobile legends', 'mlbb', 'موبايل ليجندز', 'mpl', 'mythic', 'land of dawn', 'moonton'],
+  'EA FC': ['ea fc', 'eafc', 'fc25', 'fc 25', 'fc26', 'fc 26', 'fifa', 'فيفا', 'ultimate team', 'fut', 'fc points'],
+  Editors: ['مونتاج', 'اديت', 'إيديت', 'edit', 'edits', 'editor', 'montage', 'amv', 'vfx', 'after effects', 'premiere', 'capcut', 'alight motion'],
+  'Dev & Design': ['برمجة', 'برمجه', 'مطور', 'تطوير', 'كود برمجي', 'خوارزمية', 'تطبيقات', 'مواقع', 'تصميم', 'programming', 'coding', 'developer', 'javascript', 'typescript', 'python', 'بايثون', 'react', 'nextjs', 'html', 'css', 'nodejs', 'php', 'sql', 'database', 'قاعدة بيانات', 'figma', 'photoshop', 'unity', 'unreal', 'blender', 'github', 'flutter'],
+};
+
+const SERVER_NON_GAME_TERMS: Array<{ topicAr: string; terms: string[] }> = [
+  {
+    topicAr: 'البرمجة وتطوير المواقع (مكانه سيرفر Dev & Design)',
+    terms: ['برمجة', 'برمجه', 'كود برمجي', 'تعلم البرمجة', 'مطور مواقع', 'تطوير مواقع', 'تطوير تطبيقات', 'بايثون', 'جافاسكريبت', 'جافا سكريبت', 'python', 'javascript', 'typescript', 'html', 'css', 'reactjs', 'nodejs', 'sql', 'database', 'قاعدة بيانات', 'github', 'flutter', 'php', 'algorithm', 'خوارزمية'],
+  },
+  {
+    topicAr: 'الطبخ ووصفات الطعام',
+    terms: ['طبخ', 'وصفة طبخ', 'مطبخ', 'مقادير الكيك', 'عجينة', 'طهي', 'recipe', 'cooking'],
+  },
+  {
+    topicAr: 'العملات الرقمية والتداول',
+    terms: ['بيتكوين', 'كريبتو', 'تداول فوركس', 'عملات رقمية', 'bitcoin', 'crypto', 'forex', 'usdt'],
+  },
+];
+
+function matchServerTerm(normText: string, tokens: string[], rawTerm: string): boolean {
+  const term = normalizeServerModText(rawTerm).trim();
+  if (!term) return false;
+  if (term.includes(' ') || /[^a-z0-9\u0621-\u064A]/.test(term)) return normText.includes(term);
+  if (term.length <= 3) return tokens.includes(term);
+  return tokens.includes(term) || normText.includes(term);
+}
+
+function detectServerTopicViolation(
+  serverId: string,
+  text: string,
+  lang = 'ar'
+): { violated: boolean; reason: string } {
+  const srv = (serverId || '').trim();
+  if (!srv || SERVER_OPEN_SET.has(srv) || !(srv in SERVER_TOPIC_TERMS)) {
+    return { violated: false, reason: '' };
+  }
+  if (!text.trim()) return { violated: false, reason: '' };
+  const norm = normalizeServerModText(text);
+  const tokens = norm.split(/[^a-z0-9\u0621-\u064A]+/g).filter(Boolean);
+
+  if (SERVER_TOPIC_TERMS[srv].some((t) => matchServerTerm(norm, tokens, t))) {
+    return { violated: false, reason: '' };
+  }
+
+  for (const [otherId, terms] of Object.entries(SERVER_TOPIC_TERMS)) {
+    if (otherId === srv) continue;
+    if (srv !== 'Editors' && srv !== 'Dev & Design' && otherId === 'Editors') continue;
+    if (terms.some((t) => matchServerTerm(norm, tokens, t))) {
+      return {
+        violated: true,
+        reason:
+          lang === 'ar'
+            ? `هذا المنشور خارج موضوع سيرفر «${srv}» ويناسب سيرفر «${otherId}» فقط`
+            : `Off-topic for ${srv} — please post inside ${otherId}`,
+      };
+    }
+  }
+
+  if (srv !== 'Dev & Design') {
+    for (const cat of SERVER_NON_GAME_TERMS) {
+      if (cat.terms.some((t) => matchServerTerm(norm, tokens, t))) {
+        return {
+          violated: true,
+          reason:
+            lang === 'ar'
+              ? `سيرفر «${srv}» مخصص لـ ${srv} فقط وليس لنشر مواضيع ${cat.topicAr}`
+              : `${srv} server is strictly for ${srv} content`,
+        };
+      }
+    }
+  }
+  return { violated: false, reason: '' };
+}
+
+async function checkOffTopicWithGemini(
+  serverId: string,
+  text: string,
+  lang = 'ar'
+): Promise<{ violated: boolean; reason: string } | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || !text.trim() || SERVER_OPEN_SET.has(serverId)) return null;
+  try {
+    const mod = await import('@google/genai');
+    const ai = new mod.GoogleGenAI({ apiKey });
+    const prompt = `You are a strict topic moderator for gaming community server "${serverId}".
+User wrote this post inside server "${serverId}":
+"""${text.slice(0, 400)}"""
+
+Determine if this post is clearly OFF-TOPIC for "${serverId}" (e.g., posting programming/coding/homework/cooking/crypto/or a completely different video game inside a "${serverId}" server).
+If it's generic gaming hype, greetings, LFG, "good game", or related to "${serverId}", it is ON-TOPIC (offTopic: false).
+Respond in JSON ONLY: {"offTopic": boolean, "reasonAr": "short Arabic explanation if offTopic", "reasonEn": "short English explanation if offTopic"}`;
+
+    const resp = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+    ]);
+    if (!resp || !resp.text) return null;
+    const parsed = JSON.parse(resp.text) as {
+      offTopic?: boolean;
+      reasonAr?: string;
+      reasonEn?: string;
+    };
+    if (parsed.offTopic) {
+      return {
+        violated: true,
+        reason:
+          (lang === 'ar' ? parsed.reasonAr : parsed.reasonEn) ||
+          (lang === 'ar'
+            ? `هذا المحتوى غير مرتبط بموضوع سيرفر «${serverId}»`
+            : `Off-topic for ${serverId} server`),
+      };
+    }
+    return { violated: false, reason: '' };
+  } catch {
+    return null;
+  }
 }
 
 interface OnlineUserEntry {
@@ -1125,7 +1394,44 @@ async function startServer() {
     }
   };
 
-  let cachedNewsItems: NewsItem[] = assignUniqueNewsImages(buildCuratedOfficialNews());
+  const newsArchivePath = path.resolve(uploadsDir, '.news_archive.json');
+
+  const loadPersistedNews = (): NewsItem[] => {
+    try {
+      if (fs.existsSync(newsArchivePath)) {
+        const raw = fs.readFileSync(newsArchivePath, 'utf-8');
+        const parsed = JSON.parse(raw) as unknown;
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(
+            (it): it is NewsItem =>
+              Boolean(it) &&
+              typeof it === 'object' &&
+              typeof (it as NewsItem).id === 'string' &&
+              typeof (it as NewsItem).title === 'string' &&
+              APP_NEWS_GAMES_SET.has(String((it as NewsItem).game || ''))
+          );
+          if (valid.length > 0) {
+            return assignUniqueNewsImages(
+              valid.sort((a, b) => b.publishedAtMs - a.publishedAtMs)
+            );
+          }
+        }
+      }
+    } catch {
+      // Fallback to baseline curated items below
+    }
+    return assignUniqueNewsImages(buildCuratedOfficialNews());
+  };
+
+  const persistNewsArchive = (items: NewsItem[]) => {
+    try {
+      fs.writeFileSync(newsArchivePath, JSON.stringify(items), 'utf-8');
+    } catch {
+      // Non-fatal if disk write fails
+    }
+  };
+
+  let cachedNewsItems: NewsItem[] = loadPersistedNews();
   let lastNewsUpdatedAt = Date.now();
   let newsRefreshPromise: Promise<void> | null = null;
 
@@ -1134,10 +1440,12 @@ async function startServer() {
     newsRefreshPromise = (async () => {
       try {
         const fetched: NewsItem[] = [];
-        await Promise.allSettled(
-          STEAM_APP_FEEDS.map(async (feed) => {
-            const url = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${feed.appId}&count=2&maxlength=500`;
-            const res = await fetch(url, { signal: AbortSignal.timeout(4500) });
+        const trailersPromise = getOfficialSteamTrailers();
+
+        await Promise.allSettled([
+          ...STEAM_APP_FEEDS.map(async (feed) => {
+            const url = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${feed.appId}&count=4&maxlength=500`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
             if (!res.ok) return;
             const json = (await res.json()) as {
               appnews?: {
@@ -1156,6 +1464,13 @@ async function startServer() {
               if (!it.gid || !it.title) return;
               const rawContent = it.contents || '';
               const summary = stripBbCodeAndHtml(rawContent) || it.title;
+              // Split Call of Duty HQ news accurately between Warzone and Call of Duty
+              const resolvedGame =
+                feed.appId === 1938090
+                  ? inferNewsGame(`${it.title} ${summary}`) || feed.game
+                  : feed.game;
+              if (!APP_NEWS_GAMES_SET.has(resolvedGame)) return;
+
               const extractedImage = extractImageFromSteamNews(rawContent);
               const lowerAll = `${it.title} ${summary}`.toLowerCase();
               const isTournament = /tournament|championship|major|cup|esports|qualifier|open|finals|بطول|تصفيات/i.test(
@@ -1170,7 +1485,7 @@ async function startServer() {
               const itemId = `steam_${feed.appId}_${it.gid}`;
               fetched.push({
                 id: itemId,
-                game: feed.game,
+                game: resolvedGame,
                 category: isTournament ? 'tournament' : 'update',
                 title: it.title.slice(0, 140),
                 summary,
@@ -1182,29 +1497,79 @@ async function startServer() {
                 isLiveSteam: true,
               });
             });
-          })
-        );
+          }),
+          ...GAMING_RSS_FEEDS.map(async (rss) => {
+            const res = await fetch(rss.url, {
+              headers: { 'User-Agent': 'ShaghafNewsBot/2.0' },
+              signal: AbortSignal.timeout(5500),
+            });
+            if (!res.ok) return;
+            const xml = await res.text();
+            fetched.push(...parseRssFeedItems(xml, rss.sourceName));
+          }),
+        ]);
 
-        const trailers = await getOfficialSteamTrailers();
-        const curated = buildCuratedOfficialNews(trailers);
+        const trailers = await trailersPromise;
+        const curatedBaseline = buildCuratedOfficialNews(trailers);
+
+        // Preserve all existing (old) news items strictly for our 13 in-app games.
+        // Only insert genuinely NEW official articles; do NOT overwrite or drop old items if upstream has nothing new.
         const combinedMap = new Map<string, NewsItem>();
-        [...curated, ...fetched].forEach((item) => {
-          if (!combinedMap.has(item.id)) {
-            combinedMap.set(item.id, item);
+        const seenKeys = new Set<string>();
+        const makeDedupKey = (it: NewsItem) =>
+          `${it.game.toLowerCase()}::${it.title.trim().toLowerCase()}`;
+
+        for (const existing of cachedNewsItems) {
+          if (!APP_NEWS_GAMES_SET.has(existing.game)) continue;
+          combinedMap.set(existing.id, existing);
+          seenKeys.add(makeDedupKey(existing));
+        }
+
+        let genuinelyNewCount = 0;
+        for (const item of [...fetched, ...curatedBaseline]) {
+          if (!APP_NEWS_GAMES_SET.has(item.game)) continue;
+          const dedupKey = makeDedupKey(item);
+          const existingById = combinedMap.get(item.id);
+          if (existingById) {
+            // Keep old article & timestamp intact; only enrich missing videoUrl if newly discovered
+            if (!existingById.videoUrl && item.videoUrl) {
+              combinedMap.set(item.id, { ...existingById, videoUrl: item.videoUrl });
+            }
+            continue;
           }
-        });
-        const sorted = Array.from(combinedMap.values()).sort(
-          (a, b) => b.publishedAtMs - a.publishedAtMs
-        );
-        const nextList = assignUniqueNewsImages(sorted);
-        const prevTopId = cachedNewsItems[0]?.id;
-        cachedNewsItems = nextList;
+          if (seenKeys.has(dedupKey)) continue;
+          combinedMap.set(item.id, item);
+          seenKeys.add(dedupKey);
+          genuinelyNewCount += 1;
+        }
+
         lastNewsUpdatedAt = Date.now();
-        if (nextList[0]?.id && nextList[0].id !== prevTopId) {
-          broadcastAuthenticated({ type: 'news:update', count: nextList.length });
+        if (genuinelyNewCount > 0 || cachedNewsItems.length === 0) {
+          // Keep up to 10 most recent official articles per in-app game so old news for quieter games stays preserved
+          const perGameCount = new Map<string, number>();
+          const sortedAll = Array.from(combinedMap.values()).sort(
+            (a, b) => b.publishedAtMs - a.publishedAtMs
+          );
+          const retained: NewsItem[] = [];
+          for (const it of sortedAll) {
+            const c = perGameCount.get(it.game) || 0;
+            if (c < 10) {
+              retained.push(it);
+              perGameCount.set(it.game, c + 1);
+            }
+            if (retained.length >= 120) break;
+          }
+          const nextList = assignUniqueNewsImages(retained);
+          cachedNewsItems = nextList;
+          persistNewsArchive(nextList);
+          broadcastAuthenticated({
+            type: 'news:update',
+            count: nextList.length,
+            topId: nextList[0]?.id,
+          });
         }
       } catch {
-        // Retain last good cache on transient upstream failure
+        // Keep existing old news archive untouched on transient upstream failure
       } finally {
         newsRefreshPromise = null;
       }
@@ -1215,7 +1580,7 @@ async function startServer() {
   void refreshNewsFeed();
   const newsBotInterval = setInterval(() => {
     void refreshNewsFeed();
-  }, 10 * 60_000);
+  }, 5 * 60_000);
   newsBotInterval.unref();
 
   // Official Game News & Tournaments Feed (24/7 Autonomous Bot)
@@ -1225,12 +1590,15 @@ async function startServer() {
       return;
     }
     const wantRefresh = req.query.refresh === '1';
-    if (wantRefresh || Date.now() - lastNewsUpdatedAt > 10 * 60_000) {
+    if (wantRefresh || Date.now() - lastNewsUpdatedAt > 5 * 60_000) {
       await refreshNewsFeed();
     }
     const gameFilter = String(req.query.game || '').trim().toLowerCase();
     const categoryFilter = String(req.query.category || '').trim().toLowerCase();
     const filtered = cachedNewsItems.filter((item) => {
+      if (!APP_NEWS_GAMES_SET.has(item.game)) {
+        return false;
+      }
       if (gameFilter && gameFilter !== 'all' && item.game.toLowerCase() !== gameFilter) {
         return false;
       }
@@ -1277,7 +1645,7 @@ async function startServer() {
     res.send(renderServerBgSvg(cfg));
   });
 
-  // Server-side 24/7 Moderation Endpoint (strictly exempts Owner emails)
+  // Server-side 24/7 Moderation Endpoint (profanity + off-topic server bot)
   app.post('/api/moderate', express.json({ limit: '16kb' }), async (req: Request, res: Response) => {
     if (!allowApiRead(`mod:${getClientIp(req)}`)) {
       res.status(429).json({ error: 'Too many requests' });
@@ -1288,13 +1656,34 @@ async function startServer() {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    if (OWNER_EMAILS.includes(verified.email)) {
-      res.json({ violated: false, exempt: true, kind: 'none', reason: '' });
-      return;
+    const body = (req.body || {}) as { text?: unknown; server?: unknown; lang?: unknown };
+    const text = String(body.text || '').slice(0, 1000);
+    const serverId = String(body.server || 'ALL').slice(0, 40);
+    const lang = String(body.lang || 'ar').slice(0, 5);
+    const isOwnerAccount = OWNER_EMAILS.includes(verified.email);
+
+    if (!isOwnerAccount) {
+      const check = detectServerViolation(text);
+      if (check.violated) {
+        res.json({ ...check, exempt: false });
+        return;
+      }
     }
-    const text = String((req.body as { text?: unknown })?.text || '').slice(0, 1000);
-    const check = detectServerViolation(text);
-    res.json({ ...check, exempt: false });
+
+    if (serverId && !SERVER_OPEN_SET.has(serverId)) {
+      const topicRule = detectServerTopicViolation(serverId, text, lang);
+      if (topicRule.violated) {
+        res.json({ violated: true, kind: 'off_topic', reason: topicRule.reason, exempt: false });
+        return;
+      }
+      const aiVerdict = await checkOffTopicWithGemini(serverId, text, lang);
+      if (aiVerdict?.violated) {
+        res.json({ violated: true, kind: 'off_topic', reason: aiVerdict.reason, exempt: false });
+        return;
+      }
+    }
+
+    res.json({ violated: false, exempt: isOwnerAccount, kind: 'none', reason: '' });
   });
 
   // Official Game Tournaments Schedule Endpoint
@@ -1330,26 +1719,58 @@ async function startServer() {
       const dateLabel = String(body.dateLabel || '').trim().slice(0, 40);
       const officialSource = String(body.officialSource || 'Shaghaf Official Arena').trim().slice(0, 60);
       const sourceUrl = String(body.sourceUrl || '').trim().slice(0, 500);
-      const gamerTag = String(body.gamerTag || '').trim().slice(0, 16);
-      const gameId = String(body.gameId || '').trim().slice(0, 40);
-      const rank = String(body.rank || '').trim().slice(0, 40);
+      const viewPass = body.viewPass === true;
+      const gamerTag = String(body.gamerTag || '').trim().slice(0, 16) || (viewPass ? 'Player' : '');
+      const gameId = String(body.gameId || '').trim().slice(0, 40) || (viewPass ? gamerTag || 'Player' : '');
+      const rank = String(body.rank || '').trim().slice(0, 40) || (viewPass ? 'Ranked' : '');
 
-      const missingFields: string[] = [];
-      if (!gamerTag || gamerTag.length < 3) missingFields.push('gamerTag');
-      if (!gameId) missingFields.push('gameId');
-      if (!rank) missingFields.push('rank');
+      const squadId = String(body.squadId || '').trim().slice(0, 128);
+      const squadName = String(body.squadName || '').trim().slice(0, 40);
+      const squadTag = String(body.squadTag || '').trim().slice(0, 10);
+      const rawSelected = Array.isArray(body.selectedMembers) ? body.selectedMembers : [];
+      const selectedMembers = rawSelected
+        .slice(0, 6)
+        .map((m, idx) => {
+          const item = (m && typeof m === 'object' ? m : {}) as Record<string, unknown>;
+          return {
+            slot: Math.min(6, Math.max(1, Number(item.slot) || idx + 1)),
+            uid: String(item.uid || '').trim().slice(0, 128),
+            gamerTag: String(item.gamerTag || '').trim().slice(0, 24),
+            gameId: String(item.gameId || '').trim().slice(0, 40),
+            rank: String(item.rank || '').trim().slice(0, 40),
+            role: (item.role === 'leader' ? 'leader' : 'player') as 'leader' | 'player',
+          };
+        })
+        .filter((m) => m.gamerTag.length >= 2 && m.gameId.length >= 1 && m.rank.length >= 1);
 
-      if (missingFields.length > 0) {
-        res.status(422).json({
-          ok: false,
-          incompleteProfile: true,
-          missingFields,
-        });
-        return;
+      if (!viewPass) {
+        if (mode === 'squad' && squadName) {
+          if (selectedMembers.length === 0) {
+            res.status(422).json({
+              ok: false,
+              error: 'Select at least one squad member',
+            });
+            return;
+          }
+        } else {
+          const missingFields: string[] = [];
+          if (!gamerTag || gamerTag.length < 3) missingFields.push('gamerTag');
+          if (!gameId) missingFields.push('gameId');
+          if (!rank) missingFields.push('rank');
+
+          if (missingFields.length > 0) {
+            res.status(422).json({
+              ok: false,
+              incompleteProfile: true,
+              missingFields,
+            });
+            return;
+          }
+        }
       }
 
       const trnSeed = hashString(tournamentId || title || game);
-      const playerSeed = hashString(`${tournamentId}:${verified.uid}`);
+      const playerSeed = hashString(`${tournamentId}:${verified.uid}:${squadId || 'solo'}`);
       const gameLower = game.toLowerCase();
 
       const gamePrefix = gameLower.includes('free fire')
@@ -1374,40 +1795,49 @@ async function startServer() {
       const roomCode = `SHG${100 + ((trnSeed >> 4) % 899)}`;
       const registrationCode = `${gamePrefix}-${String(playerSeed % 90000 + 10000)}`;
 
+      const effectiveGamerTag =
+        mode === 'squad' && squadName
+          ? `[${squadTag || 'SQD'}] ${squadName}`.slice(0, 28)
+          : gamerTag;
+      const effectiveGameId =
+        mode === 'squad' && selectedMembers[0]?.gameId ? selectedMembers[0].gameId : gameId;
+      const effectiveRank =
+        mode === 'squad' && selectedMembers[0]?.rank ? selectedMembers[0].rank : rank;
+
       let rules: string[];
       if (gameLower.includes('free fire')) {
         rules = [
-          `الدخول بالمعرّف المسجّل فقط (${gameId}) وعدم تبديل الحساب أثناء الروم.`,
+          `الدخول بالمعرّف المسجّل فقط (${effectiveGameId}) وعدم تبديل الحساب أثناء الروم.`,
           'يُمنع منعًا باتًا استخدام الهاك أو السكربتات أو استغلال الغليتشات (حظر وإقصاء فوري).',
           mode === 'squad'
-            ? 'الالتزام بتشكيلة السكواد الكاملة وعدم التحالف بين الفرق (Teaming).'
+            ? `الالتزام بتشكيلة السكواد المختارة (${selectedMembers.length || 4} لاعبين) وعدم التحالف بين الفرق (Teaming).`
             : 'طور فردي: يُمنع أي تحالف أو مساعدة بين اللاعبين داخل الخريطة.',
           'التواجد داخل اللوبي قبل الإقلاع بـ 10 دقائق؛ يُغلق الروم تلقائيًا عند بدء المباراة.',
           'حفظ لقطة شاشة (Screenshot) للنتيجة النهائية عند انتهاء الجولات.',
         ];
       } else if (gameLower.includes('finals')) {
         rules = [
-          `التسجيل معتمد بمعرّف Embark الخاص بك (${gameId}) ورتبة (${rank}).`,
+          `التسجيل معتمد بمعرّف Embark الخاص بك (${effectiveGameId}) ورتبة (${effectiveRank}).`,
           'مواجهات Cashout بنظام 3v3v3v3؛ يُمنع الخروج المتعمد أو استخدام برامج خارجية.',
           'تفعيل اللعب المشترك (Crossplay ON) قبل الانضمام للوبي الخاص بـ 15 دقيقة.',
           'احترام قواعد اللعب النظيف وعدم استغلال أخطاء الخرائط.',
         ];
       } else if (gameLower.includes('pubg')) {
         rules = [
-          `الدخول بـ PUBG ID المطابق لملفك (${gameId}) وبمنظور البطولة المحدد.`,
+          `الدخول بـ PUBG ID المطابق لملفك (${effectiveGameId}) وبمنظور البطولة المحدد.`,
           'ممنوع استخدام المحاكيات في بطولات الموبايل أو أي أدوات مساعدة خارجية.',
           'يبدأ فتح الروم قبل الموعد بـ 15 دقيقة والإقلاع في الموعد المحدد تمامًا.',
           'عدم التحالف مع الخصوم والالتزام بتعليمات منظمي البطولة.',
         ];
       } else if (gameLower.includes('valorant')) {
         rules = [
-          `الدخول بنفس Riot ID (${gameId}) وفي السيرفر التنافسي المحدد للمنطقة.`,
+          `الدخول بنفس Riot ID (${effectiveGameId}) وفي السيرفر التنافسي المحدد للمنطقة.`,
           'ممنوع برامج الغش (Vanguard نشط) أو استغلال الثغرات أو الخروج من المباراة.',
           'فترة الانتظار 15 دقيقة قبل الإقفال؛ أي فريق يتأخر يُحتسب منسحبًا.',
         ];
       } else {
         rules = [
-          `الدخول بمعرّف اللعبة المسجّل في ملفك (${gameId}) ورتبة (${rank}).`,
+          `الدخول بمعرّف اللعبة المسجّل في ملفك (${effectiveGameId}) ورتبة (${effectiveRank}).`,
           'منع الغش أو البرامج الخارجية أو التحالف غير المسموح به.',
           'الحضور في الروم قبل الموعد بـ 15 دقيقة والانتظار حتى إشارة الانطلاق.',
           'تصوير شاشة النتيجة النهائية لتوثيق الفوز والمكافآت.',
@@ -1428,10 +1858,20 @@ async function startServer() {
         waitTime: 'يُفتح الروم قبل الموعد بـ 15 دقيقة · ينتظرك المنظمون حتى قبل الإقلاع بـ 5 دقائق',
         rules,
         filledProfile: {
-          gamerTag,
-          gameId,
-          rank,
+          gamerTag: effectiveGamerTag,
+          gameId: effectiveGameId,
+          rank: effectiveRank,
         },
+        ...(mode === 'squad' && squadName && selectedMembers.length > 0
+          ? {
+              squad: {
+                id: squadId || 'squad',
+                name: squadName,
+                tag: squadTag || 'SQD',
+                selectedMembers,
+              },
+            }
+          : {}),
         createdAtMs: Date.now(),
       };
 
@@ -1497,7 +1937,12 @@ async function startServer() {
       if (kindHeader === 'video' || contentType.startsWith('video/')) {
         kind = 'video';
         ext = VIDEO_MIME_EXT[contentType] || 'mp4';
-      } else if (kindHeader === 'image' || contentType.startsWith('image/')) {
+      } else if (
+        kindHeader === 'image' ||
+        contentType.startsWith('image/') ||
+        contentType === 'application/octet-stream' ||
+        !contentType
+      ) {
         kind = 'image';
         ext = IMAGE_MIME_EXT[contentType] || 'jpg';
       } else {

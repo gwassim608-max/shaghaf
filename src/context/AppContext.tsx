@@ -30,7 +30,9 @@ import {
 } from '../lib/firebase';
 import {
   detectContentViolation,
+  detectServerTopicMismatch,
   formatRemainingTime,
+  GENERAL_OPEN_SERVERS,
   getPenaltyDuration,
   hasProfanity,
   LIMITS,
@@ -104,13 +106,19 @@ interface AppContextValue {
   updateProfileFields: (patch: Partial<UserPublic>) => Promise<void>;
   addXp: (amount: number) => Promise<void>;
   checkTextModeration: (text: string, scope?: 'chat' | 'post') => boolean;
-  moderateSubmission: (kind: 'post' | 'video', text: string, fileName?: string) => Promise<boolean>;
+  moderateSubmission: (
+    kind: 'post' | 'video',
+    text: string,
+    fileName?: string,
+    server?: string
+  ) => Promise<boolean>;
   enforceExistingModeration: (
     kind: 'post' | 'video',
     docId: string,
     authorUid: string,
     authorTag: string,
-    text: string
+    text: string,
+    server?: string
   ) => Promise<void>;
   dismissAutoModPopup: () => void;
   dismissAdminWarning: (warnId: string) => Promise<void>;
@@ -893,32 +901,92 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  // Auto-Moderation Bot for Posts, Photos, and Videos (deletes/rejects + small penalty + Bot reason)
+  // Auto-Moderation Bot for Posts, Photos, and Videos (profanity/NSFW + off-topic server guard)
   const moderateSubmission = async (
     kind: 'post' | 'video',
     text: string,
-    fileName = ''
+    fileName = '',
+    server = 'ALL'
   ): Promise<boolean> => {
-    if (isOwner) return true;
-    if (isBanned) {
+    if (isBanned && !isOwner) {
       showToast(t.bannedAlert);
       return false;
     }
-    const combined = `${text} ${fileName}`;
-    const check = detectContentViolation(combined, lang);
-    if (!check.violated) return true;
 
-    const nextCount = autoMod.count + 1;
-    const shortCooldownMs = Math.max(15 * 60_000, getPenaltyDuration(nextCount, lang).ms);
-    const nextState: AutoModState = {
-      count: nextCount,
-      untilMs: Date.now() + shortCooldownMs,
-    };
-    setAutoMod(nextState);
-    saveJson('sg_mod', nextState);
+    const combined = `${text} ${fileName}`;
+    let violationReason = '';
+    let isTopicViolation = false;
+
+    if (!isOwner) {
+      const check = detectContentViolation(combined, lang);
+      if (check.violated) {
+        violationReason = check.reason;
+      }
+    }
+
+    if (!violationReason && server && !GENERAL_OPEN_SERVERS.has(server)) {
+      const topicCheck = detectServerTopicMismatch(server, text, lang);
+      if (topicCheck.violated) {
+        violationReason = topicCheck.reason;
+        isTopicViolation = true;
+      }
+    }
+
+    // Also consult backend 24/7 AI/rules moderation bot
+    if (!violationReason && firebaseUser) {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const modRes = await fetch('/api/moderate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text, server, kind, lang }),
+          signal: AbortSignal.timeout(4000),
+        });
+        if (modRes.ok) {
+          const modData = (await modRes.json()) as {
+            violated?: boolean;
+            kind?: string;
+            reason?: string;
+          };
+          if (modData.violated && modData.reason) {
+            violationReason = modData.reason;
+            isTopicViolation = modData.kind === 'off_topic';
+          }
+        }
+      } catch {
+        // Keep client-side checks if server moderation is temporarily unreachable
+      }
+    }
+
+    if (!violationReason) return true;
+
+    // For Owner: block off-topic posts cleanly with bot reason without XP penalty/ban
+    if (isOwner) {
+      showToast(
+        lang === 'ar'
+          ? `🤖 بوت شغف: ${violationReason}`
+          : `🤖 Shaghaf Bot: ${violationReason}`
+      );
+      return false;
+    }
+
+    if (!isTopicViolation) {
+      const nextCount = autoMod.count + 1;
+      const shortCooldownMs = Math.max(15 * 60_000, getPenaltyDuration(nextCount, lang).ms);
+      const nextState: AutoModState = {
+        count: nextCount,
+        untilMs: Date.now() + shortCooldownMs,
+      };
+      setAutoMod(nextState);
+      saveJson('sg_mod', nextState);
+    }
 
     if (firebaseUser && profile) {
-      const nextXp = Math.max(0, (profile.xp || 0) - 15);
+      const xpPenalty = isTopicViolation ? 5 : 15;
+      const nextXp = Math.max(0, (profile.xp || 0) - xpPenalty);
       updateDoc(doc(db, 'users_public', firebaseUser.uid), {
         xp: nextXp,
         updatedAt: serverTimestamp(),
@@ -938,8 +1006,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         title: lang === 'ar' ? `حذف ${kindLabel} بواسطة بوت شغف 🤖` : `Content removed by Shaghaf Bot`,
         body:
           lang === 'ar'
-            ? `قام بوت شغف بحذف/رفض ${kindLabel} تلقائيًا.\nالسبب: ${check.reason}\nالعقوبة الخفيفة: خصم 15 XP وكتم مؤقت لمدة 15 دقيقة.`
-            : `Shaghaf Bot removed your ${kindLabel}.\nReason: ${check.reason}\nLight penalty: -15 XP and 15m cooldown.`,
+            ? `قام بوت شغف برفض/حذف ${kindLabel} تلقائيًا.\nالسبب: ${violationReason}\nالعقوبة: خصم ${xpPenalty} XP.`
+            : `Shaghaf Bot removed your ${kindLabel}.\nReason: ${violationReason}\nPenalty: -${xpPenalty} XP.`,
         kind: 'warning',
         read: false,
         createdAt: serverTimestamp(),
@@ -950,56 +1018,84 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reporterTag: profile.gamerTag,
         targetUid: firebaseUser.uid,
         targetTag: profile.gamerTag,
-        reason: `[AUTO-BOT ${kind.toUpperCase()}] ${check.reason} (-15 XP)`,
+        reason: `[AUTO-BOT ${kind.toUpperCase()}] ${violationReason}`.slice(0, 240),
         createdAt: serverTimestamp(),
       }).catch(() => {});
     }
 
     showToast(
       lang === 'ar'
-        ? `حذف البوت المحتوى: ${check.reason} (خصم 15 XP)`
-        : `Removed by Bot: ${check.reason} (-15 XP)`
+        ? `🤖 رفض البوت المحتوى: ${violationReason}`
+        : `🤖 Removed by Bot: ${violationReason}`
     );
     return false;
   };
 
-  // Sweep existing violating posts/videos when viewed by Owner or author
+  // Sweep existing violating or off-topic posts/videos across all servers
   const enforceExistingModeration = useCallback(
     async (
       kind: 'post' | 'video',
       docId: string,
       authorUid: string,
       _authorTag: string,
-      text: string
+      text: string,
+      server?: string
     ) => {
       if (!firebaseUser) return;
-      const authorIsOwner =
-        flagsMap[authorUid]?.badge === 'own' || (authorUid === firebaseUser.uid && isOwner);
-      if (authorIsOwner) return;
       if (firebaseUser.uid !== authorUid && !isOwner) return;
 
-      const key = `${kind}:${docId}`;
+      const key = `${kind}:${docId}:${server || ''}`;
       if (moderatedIdsRef.current.has(key)) return;
-      const check = detectContentViolation(text, lang);
-      if (!check.violated) return;
+
+      const authorIsOwner =
+        flagsMap[authorUid]?.badge === 'own' || (authorUid === firebaseUser.uid && isOwner);
+
+      let violationReason = '';
+      let isTopicViolation = false;
+
+      if (!authorIsOwner) {
+        const contentCheck = detectContentViolation(text, lang);
+        if (contentCheck.violated) {
+          violationReason = contentCheck.reason;
+        }
+      }
+
+      if (!violationReason && server && !GENERAL_OPEN_SERVERS.has(server)) {
+        const topicCheck = detectServerTopicMismatch(server, text, lang);
+        if (topicCheck.violated) {
+          violationReason = topicCheck.reason;
+          isTopicViolation = true;
+        }
+      }
+
+      if (!violationReason) return;
 
       moderatedIdsRef.current.add(key);
       const col = kind === 'video' ? 'videos' : 'posts';
       try {
         await deleteDoc(doc(db, col, docId));
-        await addDoc(collection(db, 'bot_messages', authorUid, 'items'), {
-          targetUid: authorUid,
-          title: lang === 'ar' ? 'حذف محتوى مخالف من بوت شغف 🤖' : 'Removed by Shaghaf Bot',
-          body:
+        if (!authorIsOwner) {
+          await addDoc(collection(db, 'bot_messages', authorUid, 'items'), {
+            targetUid: authorUid,
+            title: lang === 'ar' ? 'حذف محتوى مخالف من بوت شغف 🤖' : 'Removed by Shaghaf Bot',
+            body:
+              lang === 'ar'
+                ? `تم حذف ${kind === 'video' ? 'فيديو' : 'منشور'} تلقائيًا بواسطة بوت شغف.\nالسبب: ${violationReason}`
+                : `Your ${kind} was removed by Shaghaf Bot.\nReason: ${violationReason}`,
+            kind: 'warning',
+            read: false,
+            createdAt: serverTimestamp(),
+          });
+        }
+        if (isTopicViolation && firebaseUser.uid === authorUid) {
+          showToast(
             lang === 'ar'
-              ? `تم حذف ${kind === 'video' ? 'فيديو' : 'منشور'} تلقائيًا بواسطة بوت شغف.\nالسبب: ${check.reason}\nالعقوبة: خصم 15 نقطة XP.`
-              : `Your ${kind} was removed by Shaghaf Bot.\nReason: ${check.reason}\nPenalty: -15 XP.`,
-          kind: 'warning',
-          read: false,
-          createdAt: serverTimestamp(),
-        });
+              ? `🤖 حذف البوت منشورًا خارج موضوع السيرفر: ${violationReason}`
+              : `🤖 Bot removed off-topic post: ${violationReason}`
+          );
+        }
       } catch {
-        // ignore if already deleted
+        // ignore if already deleted or lacking permission
       }
     },
     [firebaseUser, flagsMap, isOwner, lang]

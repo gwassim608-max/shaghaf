@@ -52,7 +52,7 @@ service cloud.firestore {
       );
     }
     function isSafeMediaUrl(url) {
-      return url is string && url.size() >= 8 && url.size() <= 500 && (
+      return url is string && url.size() >= 8 && url.size() <= 1000 && (
         url.matches('^https://.*')
         || url.matches('^/uploads/[a-zA-Z0-9._\\-]+$')
         || url.matches('^/api/meme/[a-zA-Z0-9._\\-]+\\.svg$')
@@ -308,11 +308,60 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
+    function isValidSquadMemberEntry(m) {
+      return m is map
+        && m.keys().hasAll(['slot', 'uid', 'gamerTag', 'gameId', 'rank', 'role'])
+        && m.keys().hasOnly(['slot', 'uid', 'gamerTag', 'gameId', 'rank', 'role'])
+        && m.slot is number && m.slot >= 1 && m.slot <= 6
+        && m.uid is string && m.uid.size() <= 128
+        && m.gamerTag is string && m.gamerTag.size() >= 2 && m.gamerTag.size() <= 24
+        && m.gameId is string && m.gameId.size() >= 1 && m.gameId.size() <= 40
+        && m.rank is string && m.rank.size() >= 1 && m.rank.size() <= 40
+        && m.role in ['leader', 'player'];
+    }
+
+    function isValidSquad(data) {
+      return data.keys().hasAll(['name', 'tag', 'game', 'leaderUid', 'leaderTag', 'memberUids', 'members', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'tag', 'game', 'leaderUid', 'leaderTag', 'memberUids', 'members', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 40
+        && data.tag is string && data.tag.size() >= 2 && data.tag.size() <= 8
+        && data.game is string && data.game.size() >= 2 && data.game.size() <= 40
+        && data.leaderUid is string && data.leaderUid.size() >= 1 && data.leaderUid.size() <= 128
+        && data.leaderTag is string && data.leaderTag.size() >= 3 && data.leaderTag.size() <= 16
+        && data.memberUids is list && data.memberUids.size() >= 1 && data.memberUids.size() <= 6
+        && data.memberUids[0] is string && data.memberUids[0].size() >= 1 && data.memberUids[0].size() <= 128
+        && data.leaderUid in data.memberUids
+        && data.members is list && data.members.size() == 6
+        && isValidSquadMemberEntry(data.members[0])
+        && isValidSquadMemberEntry(data.members[1])
+        && isValidSquadMemberEntry(data.members[2])
+        && isValidSquadMemberEntry(data.members[3])
+        && isValidSquadMemberEntry(data.members[4])
+        && isValidSquadMemberEntry(data.members[5])
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
     function isValidTournamentParticipant(data) {
       return data.keys().hasAll(['uid', 'gamerTag', 'joinedAt'])
-        && data.keys().hasOnly(['uid', 'gamerTag', 'joinedAt'])
+        && data.keys().hasOnly(['uid', 'gamerTag', 'roomId', 'roomCode', 'registrationCode', 'matchTime', 'gameId', 'rank', 'squadId', 'squadName', 'squadTag', 'selectedMembers', 'joinedAt'])
         && data.uid == request.auth.uid
         && data.gamerTag is string && data.gamerTag.size() >= 3 && data.gamerTag.size() <= 16
+        && (!('roomId' in data) || (data.roomId is string && data.roomId.size() <= 64))
+        && (!('roomCode' in data) || (data.roomCode is string && data.roomCode.size() <= 64))
+        && (!('registrationCode' in data) || (data.registrationCode is string && data.registrationCode.size() <= 64))
+        && (!('matchTime' in data) || (data.matchTime is string && data.matchTime.size() <= 80))
+        && (!('gameId' in data) || (data.gameId is string && data.gameId.size() <= 40))
+        && (!('rank' in data) || (data.rank is string && data.rank.size() <= 40))
+        && (!('squadId' in data) || (data.squadId is string && data.squadId.size() >= 1 && data.squadId.size() <= 128))
+        && (!('squadName' in data) || (data.squadName is string && data.squadName.size() >= 2 && data.squadName.size() <= 40))
+        && (!('squadTag' in data) || (data.squadTag is string && data.squadTag.size() >= 2 && data.squadTag.size() <= 10))
+        && (!('selectedMembers' in data) || (
+          data.selectedMembers is list
+          && data.selectedMembers.size() >= 1
+          && data.selectedMembers.size() <= 6
+          && isValidSquadMemberEntry(data.selectedMembers[0])
+        ))
         && data.joinedAt == request.time;
     }
 
@@ -349,11 +398,12 @@ service cloud.firestore {
 
     function isValidBotMessage(data) {
       return data.keys().hasAll(['targetUid', 'title', 'body', 'kind', 'read', 'createdAt'])
-        && data.keys().hasOnly(['targetUid', 'title', 'body', 'kind', 'read', 'createdAt'])
+        && data.keys().hasOnly(['targetUid', 'title', 'body', 'kind', 'squadId', 'read', 'createdAt'])
         && data.targetUid is string && data.targetUid.size() >= 1 && data.targetUid.size() <= 128
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 80
         && data.body is string && data.body.size() >= 1 && data.body.size() <= 900
         && data.kind in ['welcome', 'warning', 'ban', 'tournament']
+        && (!('squadId' in data) || (data.squadId is string && data.squadId.size() >= 1 && data.squadId.size() <= 128))
         && data.read is bool
         && data.createdAt is timestamp;
     }
@@ -365,7 +415,7 @@ service cloud.firestore {
         && data.authorTag is string && data.authorTag.size() >= 3 && data.authorTag.size() <= 16
         && data.server is string && data.server.size() >= 1 && data.server.size() <= 40
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
-        && data.videoUrl is string && data.videoUrl.size() >= 10 && data.videoUrl.size() <= 500
+        && data.videoUrl is string && data.videoUrl.size() >= 10 && data.videoUrl.size() <= 1000
         && (data.videoUrl.matches('^https://.*') || data.videoUrl.matches('^/uploads/[a-zA-Z0-9._\\-]+$'))
         && (!('hashtags' in data) || (
           data.hashtags is list
@@ -472,19 +522,19 @@ service cloud.firestore {
       allow delete: if isVerified() && isValidId(postId) && (existing().authorUid == request.auth.uid || isAdmin());
 
       match /likes/{likerUid} {
-        allow get: if isSignedIn() && isValidId(postId) && isValidId(likerUid) && existing().uid is string;
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(likerUid) && (resource == null || existing().uid is string);
         allow list: if isSignedIn() && resource.data.uid is string;
         allow create: if isVerified() && isValidId(postId) && isValidId(likerUid)
           && likerUid == request.auth.uid
           && isValidPostLike(incoming())
           && exists(/databases/$(database)/documents/posts/$(postId))
-          && notBanned();
+          && (notBanned() || isAdmin());
         allow update: if false;
-        allow delete: if isVerified() && isValidId(postId) && isValidId(likerUid) && likerUid == request.auth.uid;
+        allow delete: if isVerified() && isValidId(postId) && isValidId(likerUid) && (likerUid == request.auth.uid || isAdmin());
       }
 
       match /comments/{commentId} {
-        allow get: if isSignedIn() && isValidId(postId) && isValidId(commentId) && existing().authorUid is string;
+        allow get: if isSignedIn() && isValidId(postId) && isValidId(commentId) && (resource == null || existing().authorUid is string);
         allow list: if isSignedIn() && resource.data.authorUid is string;
         allow create: if isVerified() && isValidId(postId) && isValidId(commentId)
           && isValidPostComment(incoming())
@@ -716,10 +766,36 @@ service cloud.firestore {
           && participantUid == request.auth.uid
           && isValidTournamentParticipant(incoming())
           && incoming().uid == existing().uid
-          && incoming().diff(existing()).affectedKeys().hasOnly(['gamerTag', 'joinedAt'])
+          && incoming().diff(existing()).affectedKeys().hasOnly(['gamerTag', 'roomId', 'roomCode', 'registrationCode', 'matchTime', 'gameId', 'rank', 'squadId', 'squadName', 'squadTag', 'selectedMembers', 'joinedAt'])
           && (notBanned() || isAdmin());
         allow delete: if isVerified() && isValidId(tournamentId) && isValidId(participantUid) && (participantUid == request.auth.uid || isAdmin());
       }
+    }
+
+    match /squads/{squadId} {
+      allow get: if isSignedIn() && isValidId(squadId) && (
+        resource == null
+        || existing().leaderUid == request.auth.uid
+        || request.auth.uid in existing().memberUids
+        || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.leaderUid == request.auth.uid
+        || request.auth.uid in resource.data.memberUids
+        || isAdmin()
+      );
+      allow create: if isVerified() && isValidId(squadId)
+        && isValidSquad(incoming())
+        && incoming().leaderUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && (notBanned() || isAdmin());
+      allow update: if isVerified() && isValidId(squadId)
+        && isValidSquad(incoming())
+        && incoming().leaderUid == existing().leaderUid
+        && incoming().createdAt == existing().createdAt
+        && (existing().leaderUid == request.auth.uid || isAdmin())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'tag', 'game', 'memberUids', 'members', 'updatedAt']);
+      allow delete: if isVerified() && isValidId(squadId) && (existing().leaderUid == request.auth.uid || isAdmin());
     }
 
     match /warns/{targetUid}/items/{warnId} {
@@ -766,6 +842,16 @@ service cloud.firestore {
         && (
           isAdmin()
           || (request.auth.uid == targetUid && incoming().kind in ['welcome', 'tournament'] && (notBanned() || isAdmin()))
+          || (
+            incoming().kind == 'tournament'
+            && incoming().read == false
+            && ('squadId' in incoming())
+            && isValidId(incoming().squadId)
+            && exists(/databases/$(database)/documents/squads/$(incoming().squadId))
+            && get(/databases/$(database)/documents/squads/$(incoming().squadId)).data.leaderUid == request.auth.uid
+            && targetUid in get(/databases/$(database)/documents/squads/$(incoming().squadId)).data.memberUids
+            && notBanned()
+          )
         );
       allow update: if isVerified() && isValidId(targetUid) && isValidId(msgId)
         && request.auth.uid == targetUid

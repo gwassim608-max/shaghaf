@@ -290,3 +290,200 @@ export function getPenaltyDuration(count: number, lang: Language): { ms: number;
   const ms = count <= 4 ? durations[count - 1] : 604800_000 * 2 * (count - 4);
   return { ms, label: labels[lang][idx] };
 }
+
+export const GENERAL_OPEN_SERVERS = new Set(['ALL', 'FOR_YOU', 'Clans & LFG', 'MENA', 'Global', '']);
+
+const SERVER_TOPIC_KEYWORDS: Record<string, string[]> = {
+  'Free Fire': [
+    'free fire', 'freefire', 'ff', 'garena', 'فري فاير', 'فريفاير', 'كارينا',
+    'booyah', 'بويا', 'بوياه', 'bermuda', 'برمودا', 'clash squad', 'كلاش سكواد',
+    'alok', 'الوك', 'chrono', 'كرونو', 'lone wolf', 'لون ولف', 'diamonds', 'جواهر',
+    'ون تاب', 'one tap', 'هيدشوت', 'رومات فري',
+  ],
+  'PUBG Mobile': [
+    'pubg', 'pubgm', 'ببجي', 'بابجي', 'erangel', 'ارنغل', 'ايرانغل', 'livik', 'ليفيك',
+    'miramar', 'ميرامار', 'pmco', 'pmgc', 'uc', 'شدات', 'conqueror', 'كونكر',
+    'chicken dinner', 'تشيكن دينر', 'm416', 'ام فور',
+  ],
+  'THE FINALS': [
+    'the finals', 'ذا فاينلز', 'فاينلز', 'embark', 'cashout', 'كاش اوت',
+    'world tour', 'multibucks', 'ospuze', 'cns', 'heavy build', 'medium build', 'light build',
+  ],
+  Warzone: [
+    'warzone', 'وارزون', 'verdansk', 'فردانسك', 'rebirth', 'ريبرث', 'gulag', 'قولاغ',
+    'urzikstan', 'loadout', 'لود اوت', 'resurgence', 'cod points',
+  ],
+  Fortnite: [
+    'fortnite', 'فورتنايت', 'فورت نايت', 'vbucks', 'v-bucks', 'في باكس', 'zero build',
+    'battle bus', 'tilted', 'fncs', 'victory cup', 'epic games',
+  ],
+  Valorant: [
+    'valorant', 'فالورانت', 'فالورنت', 'vct', 'riot', 'spike', 'سبايك',
+    'radiant', 'immortal', 'jett', 'جيت', 'reyna', 'رينا', 'vandal', 'phantom', 'premier',
+  ],
+  'Apex Legends': [
+    'apex', 'apex legends', 'ابيكس', 'أبيكس', 'algs', 'wraith', 'octane',
+    'pathfinder', 'heirloom', 'kings canyon', 'olympus', 'respawn',
+  ],
+  'Call of Duty': [
+    'call of duty', 'cod', 'codm', 'كول اوف ديوتي', 'كود موبايل', 'nuketown',
+    'search and destroy', 'bo6', 'mw3', 'black ops', 'modern warfare',
+  ],
+  CS2: [
+    'cs2', 'csgo', 'counter strike', 'counter-strike', 'كونتر سترايك', 'كاونتر',
+    'dust2', 'mirage', 'awp', 'faceit', 'valve', 'inferno', 'ak47',
+  ],
+  'League of Legends': [
+    'league of legends', 'lol', 'ليج اوف ليجندز', 'لول', 'summoner', 'rift',
+    'worlds', 'yasuo', 'faker', 'adc', 'jungle', 'baron', 'tft',
+  ],
+  'Rocket League': [
+    'rocket league', 'روكت ليق', 'روكت ليج', 'rlcs', 'flip reset',
+    'fennec', 'dominus', 'grand champ', 'supersonic',
+  ],
+  'Mobile Legends': [
+    'mobile legends', 'mlbb', 'موبايل ليجندز', 'mpl', 'mythic',
+    'land of dawn', 'savage', 'moonton', 'gusion',
+  ],
+  'EA FC': [
+    'ea fc', 'eafc', 'fc25', 'fc 25', 'fc26', 'fc 26', 'fifa', 'فيفا',
+    'ultimate team', 'fut', 'pro clubs', 'career mode', 'fc points', 'sbc',
+  ],
+  Editors: [
+    'مونتاج', 'اديت', 'إيديت', 'edit', 'edits', 'editor', 'montage', 'amv', 'vfx',
+    'after effects', 'افتر افكت', 'premiere', 'بريمير', 'capcut', 'كاب كت',
+    'alight motion', 'twixtor', 'velocity', 'lut', 'color grading', 'thumbnail', '60fps',
+  ],
+  'Dev & Design': [
+    'برمجة', 'برمجه', 'مطور', 'تطوير', 'كود برمجي', 'خوارزمية', 'تطبيقات', 'مواقع',
+    'تطوير مواقع', 'تصميم', 'جرافيك', 'واجهة', 'programming', 'coding', 'developer',
+    'javascript', 'typescript', 'python', 'بايثون', 'react', 'nextjs', 'html', 'css',
+    'nodejs', 'node.js', 'c++', 'php', 'sql', 'database', 'قاعدة بيانات', 'ui/ux',
+    'figma', 'فيغما', 'photoshop', 'فوتوشوب', 'illustrator', 'unity', 'unreal',
+    'blender', 'github', 'flutter', 'dart', 'backend', 'frontend',
+  ],
+};
+
+const NON_GAME_OFF_TOPIC_KEYWORDS: Array<{ topicAr: string; topicEn: string; terms: string[] }> = [
+  {
+    topicAr: 'البرمجة وتطوير المواقع (مكانه سيرفر Dev & Design)',
+    topicEn: 'Programming & Dev (belongs in Dev & Design)',
+    terms: [
+      'برمجة', 'برمجه', 'كود برمجي', 'تعلم البرمجة', 'مطور مواقع', 'تطوير مواقع',
+      'تطوير تطبيقات', 'بايثون', 'جافاسكريبت', 'جافا سكريبت', 'تايب سكريبت',
+      'رياكت', 'python', 'javascript', 'typescript', 'html', 'css', 'reactjs',
+      'nodejs', 'sql', 'database', 'قاعدة بيانات', 'github', 'flutter', 'php',
+      'algorithm', 'خوارزمية', 'برمج', 'كود html',
+    ],
+  },
+  {
+    topicAr: 'الطبخ ووصفات الطعام',
+    topicEn: 'Cooking & recipes',
+    terms: ['طبخ', 'وصفة طبخ', 'مطبخ', 'مقادير الكيك', 'عجينة', 'طهي', 'recipe', 'cooking'],
+  },
+  {
+    topicAr: 'العملات الرقمية والتداول',
+    topicEn: 'Crypto & trading',
+    terms: ['بيتكوين', 'كريبتو', 'تداول فوركس', 'عملات رقمية', 'bitcoin', 'crypto', 'forex', 'usdt'],
+  },
+  {
+    topicAr: 'الواجبات الدراسية',
+    topicEn: 'School homework',
+    terms: ['واجب مدرسي', 'حل تمرين رياضيات', 'إعراب', 'معادلة فيزياء', 'امتحان كيمياء'],
+  },
+];
+
+function textMatchesTerm(normalizedText: string, tokens: string[], rawTerm: string): boolean {
+  const term = normalizeMod(rawTerm).trim();
+  if (!term) return false;
+  if (term.includes(' ') || /[^a-z0-9\u0621-\u064A]/.test(term)) {
+    return normalizedText.includes(term);
+  }
+  if (term.length <= 3) {
+    return tokens.includes(term);
+  }
+  return tokens.includes(term) || normalizedText.includes(term);
+}
+
+export function detectServerTopicMismatch(
+  serverId: string | undefined,
+  text: string,
+  lang: Language = 'ar'
+): { violated: boolean; detectedTopic?: string; reason: string } {
+  const server = (serverId || '').trim();
+  if (!server || GENERAL_OPEN_SERVERS.has(server) || !(server in SERVER_TOPIC_KEYWORDS)) {
+    return { violated: false, reason: '' };
+  }
+
+  const trimmed = text.trim();
+  if (!trimmed) return { violated: false, reason: '' };
+
+  const normalized = normalizeMod(trimmed);
+  const tokens = normalized.split(SEP_REGEX).filter(Boolean);
+
+  // If post explicitly relates to the current server, allow it
+  const ownTerms = SERVER_TOPIC_KEYWORDS[server] || [];
+  if (ownTerms.some((term) => textMatchesTerm(normalized, tokens, term))) {
+    return { violated: false, reason: '' };
+  }
+
+  // Check if content clearly belongs to another specific server
+  const otherServers = Object.entries(SERVER_TOPIC_KEYWORDS).filter(([id]) => id !== server);
+  let matchedOther: { id: string; hits: number } | null = null;
+  for (const [otherId, terms] of otherServers) {
+    let hits = 0;
+    for (const term of terms) {
+      if (textMatchesTerm(normalized, tokens, term)) {
+        hits += 1;
+      }
+    }
+    if (hits > 0 && (!matchedOther || hits > matchedOther.hits)) {
+      matchedOther = { id: otherId, hits };
+    }
+  }
+
+  if (matchedOther) {
+    // Allow montage/edit talk inside a game server if it mentions clips/gameplay, reject only if purely another game or Dev in Game
+    const isGameServer = server !== 'Editors' && server !== 'Dev & Design';
+    const allowEditorsInGame = isGameServer && matchedOther.id === 'Editors';
+    if (!allowEditorsInGame) {
+      const targetItem = SERVERS.find((s) => s.id === matchedOther.id);
+      const targetLabel = targetItem ? targetItem.labels[lang] : matchedOther.id;
+      const serverItem = SERVERS.find((s) => s.id === server);
+      const serverLabel = serverItem ? serverItem.labels[lang] : server;
+      return {
+        violated: true,
+        detectedTopic: matchedOther.id,
+        reason:
+          lang === 'ar'
+            ? `هذا المنشور خارج موضوع سيرفر «${serverLabel}» ويناسب سيرفر «${targetLabel}» فقط`
+            : lang === 'fr'
+            ? `Ce post est hors sujet pour « ${serverLabel} » (plutôt pour « ${targetLabel} »)`
+            : `Off-topic for ${serverLabel} server — post this in ${targetLabel} instead`,
+      };
+    }
+  }
+
+  // Check non-gaming off-topic categories inside game/editor servers
+  if (server !== 'Dev & Design') {
+    for (const cat of NON_GAME_OFF_TOPIC_KEYWORDS) {
+      if (cat.terms.some((term) => textMatchesTerm(normalized, tokens, term))) {
+        const serverItem = SERVERS.find((s) => s.id === server);
+        const serverLabel = serverItem ? serverItem.labels[lang] : server;
+        return {
+          violated: true,
+          detectedTopic: cat.topicEn,
+          reason:
+            lang === 'ar'
+              ? `هذا السيرفر مخصص لـ «${serverLabel}» فقط وليس لنشر مواضيع ${cat.topicAr}`
+              : lang === 'fr'
+              ? `Ce serveur est réservé à « ${serverLabel} », pas à ${cat.topicEn}`
+              : `This server is dedicated to ${serverLabel}, not ${cat.topicEn}`,
+        };
+      }
+    }
+  }
+
+  return { violated: false, reason: '' };
+}
+

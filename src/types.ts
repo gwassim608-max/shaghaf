@@ -195,9 +195,41 @@ export interface Tournament {
   createdAt?: unknown;
 }
 
+export interface SquadMemberEntry {
+  slot: number; // 1..6
+  uid: string; // '' if manual teammate without linked account
+  gamerTag: string;
+  gameId: string;
+  rank: string;
+  role: 'leader' | 'player';
+}
+
+export interface Squad {
+  id: string;
+  name: string;
+  tag: string;
+  game: string;
+  leaderUid: string;
+  leaderTag: string;
+  memberUids: string[];
+  members: SquadMemberEntry[];
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
 export interface TournamentParticipant {
   uid: string;
   gamerTag: string;
+  roomId?: string;
+  roomCode?: string;
+  registrationCode?: string;
+  matchTime?: string;
+  gameId?: string;
+  rank?: string;
+  squadId?: string;
+  squadName?: string;
+  squadTag?: string;
+  selectedMembers?: SquadMemberEntry[];
   joinedAt?: unknown;
 }
 
@@ -218,6 +250,12 @@ export interface TournamentTicket {
     gamerTag: string;
     gameId: string;
     rank: string;
+  };
+  squad?: {
+    id: string;
+    name: string;
+    tag: string;
+    selectedMembers: SquadMemberEntry[];
   };
   createdAtMs: number;
 }
@@ -262,6 +300,7 @@ export interface BotMessage {
   title: string;
   body: string;
   kind: 'welcome' | 'warning' | 'ban' | 'tournament';
+  squadId?: string;
   read: boolean;
   createdAt?: unknown;
 }
